@@ -65,7 +65,7 @@ export function SSOLinkedTemplate({
 
       {linkedAt && (
         <EmailParagraph>
-          绑定时间：{new Date(linkedAt).toLocaleString("zh-CN")}
+          绑定时间：{new Date(linkedAt).toLocaleString("zh-CN", { timeZone: "UTC" })} (UTC)
         </EmailParagraph>
       )}
 

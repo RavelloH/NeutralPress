@@ -283,8 +283,8 @@ async function collectRangeStats(
       COUNT(*)::bigint AS total_views,
       COUNT(DISTINCT "visitorId")::bigint AS unique_visitors
     FROM "PageView"
-    WHERE "timestamp" >= (${startTs}::timestamp AT TIME ZONE ${timezone})
-      AND "timestamp" < (${endTs}::timestamp AT TIME ZONE ${timezone})
+    WHERE "timestamp" >= ((${startTs}::timestamp AT TIME ZONE ${timezone}) AT TIME ZONE 'UTC')
+      AND "timestamp" < ((${endTs}::timestamp AT TIME ZONE ${timezone}) AT TIME ZONE 'UTC')
       AND ("deviceType" IS NULL OR "deviceType" <> 'bot')
   `;
 
@@ -324,16 +324,16 @@ async function collectRangeStats(
     prisma.$queryRaw<Array<{ path: string; count: bigint }>>`
       SELECT "path", COUNT(*)::bigint AS count
       FROM "PageView"
-      WHERE "timestamp" >= (${startTs}::timestamp AT TIME ZONE ${timezone})
-        AND "timestamp" < (${endTs}::timestamp AT TIME ZONE ${timezone})
+      WHERE "timestamp" >= ((${startTs}::timestamp AT TIME ZONE ${timezone}) AT TIME ZONE 'UTC')
+        AND "timestamp" < ((${endTs}::timestamp AT TIME ZONE ${timezone}) AT TIME ZONE 'UTC')
         AND ("deviceType" IS NULL OR "deviceType" <> 'bot')
       GROUP BY "path"
     `,
     prisma.$queryRaw<Array<{ referer: string | null; count: bigint }>>`
       SELECT "referer", COUNT(*)::bigint AS count
       FROM "PageView"
-      WHERE "timestamp" >= (${startTs}::timestamp AT TIME ZONE ${timezone})
-        AND "timestamp" < (${endTs}::timestamp AT TIME ZONE ${timezone})
+      WHERE "timestamp" >= ((${startTs}::timestamp AT TIME ZONE ${timezone}) AT TIME ZONE 'UTC')
+        AND "timestamp" < ((${endTs}::timestamp AT TIME ZONE ${timezone}) AT TIME ZONE 'UTC')
         AND ("deviceType" IS NULL OR "deviceType" <> 'bot')
       GROUP BY "referer"
     `,

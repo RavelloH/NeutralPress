@@ -65,7 +65,7 @@ export function SSOUnlinkedTemplate({
 
       {unlinkedAt && (
         <EmailParagraph>
-          解绑时间：{new Date(unlinkedAt).toLocaleString("zh-CN")}
+          解绑时间：{new Date(unlinkedAt).toLocaleString("zh-CN", { timeZone: "UTC" })} (UTC)
         </EmailParagraph>
       )}
 
