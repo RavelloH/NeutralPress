@@ -25,6 +25,7 @@ import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { AlertDialog } from "@/ui/AlertDialog";
 import type { TableColumn } from "@/ui/Table";
 import { useToast } from "@/ui/Toast";
+import { formatDateTimeLocale } from "@/lib/shared/date-format";
 
 type SortKey =
   | "id"
@@ -68,11 +69,6 @@ const statusClassName: Record<FriendLinkStatus, string> = {
   NO_BACKLINK: "text-error",
   BLOCKED: "text-error",
 };
-
-function formatDateTime(value: string | null): string {
-  if (!value) return "-";
-  return new Date(value).toLocaleString("zh-CN");
-}
 
 function getRateClass(rate: number): string {
   if (rate >= 90) return "text-foreground";
@@ -519,7 +515,7 @@ export default function FriendsTable() {
       sortable: true,
       mono: true,
       render: (value) =>
-        formatDateTime(typeof value === "string" ? value : null),
+        formatDateTimeLocale(typeof value === "string" ? value : null),
     },
     {
       key: "createdAt",
@@ -529,7 +525,7 @@ export default function FriendsTable() {
       sortable: true,
       mono: true,
       render: (value) =>
-        formatDateTime(typeof value === "string" ? value : null),
+        formatDateTimeLocale(typeof value === "string" ? value : null),
     },
   ];
 

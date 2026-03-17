@@ -15,6 +15,7 @@ import { useBroadcast } from "@/hooks/use-broadcast";
 import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import type { TableColumn } from "@/ui/Table";
+import { formatDateTimeWithSeconds } from "@/lib/shared/date-format";
 
 type SortKey =
   | "id"
@@ -49,17 +50,6 @@ const TRIGGER_TYPE_LABELS: Record<CloudHistoryItem["triggerType"], string> = {
   CLOUD: "云端触发",
   AUTO: "自动触发",
 };
-
-function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
 
 function getDisplayStatus(
   record: Pick<CloudHistoryItem, "status" | "receivedAt">,
@@ -460,7 +450,7 @@ export default function CloudHistoryTable() {
       sortable: true,
       mono: true,
       render: (value: unknown) =>
-        typeof value === "string" ? formatDateTime(value) : "-",
+        typeof value === "string" ? formatDateTimeWithSeconds(value) : "-",
     },
     {
       key: "updatedAt",
@@ -470,7 +460,7 @@ export default function CloudHistoryTable() {
       sortable: true,
       mono: true,
       render: (value: unknown) =>
-        typeof value === "string" ? formatDateTime(value) : "-",
+        typeof value === "string" ? formatDateTimeWithSeconds(value) : "-",
     },
     {
       key: "detail",
@@ -580,7 +570,7 @@ export default function CloudHistoryTable() {
                     接收时间
                   </label>
                   <p className="text-sm font-mono">
-                    {formatDateTime(selectedRecord.receivedAt)}
+                    {formatDateTimeWithSeconds(selectedRecord.receivedAt)}
                   </p>
                 </div>
                 <div>
@@ -589,7 +579,7 @@ export default function CloudHistoryTable() {
                   </label>
                   <p className="text-sm font-mono">
                     {selectedRecord.requestedAt
-                      ? formatDateTime(selectedRecord.requestedAt)
+                      ? formatDateTimeWithSeconds(selectedRecord.requestedAt)
                       : "-"}
                   </p>
                 </div>
@@ -598,7 +588,7 @@ export default function CloudHistoryTable() {
                     创建时间
                   </label>
                   <p className="text-sm font-mono">
-                    {formatDateTime(selectedRecord.createdAt)}
+                    {formatDateTimeWithSeconds(selectedRecord.createdAt)}
                   </p>
                 </div>
                 <div>
@@ -606,7 +596,7 @@ export default function CloudHistoryTable() {
                     更新时间
                   </label>
                   <p className="text-sm font-mono">
-                    {formatDateTime(selectedRecord.updatedAt)}
+                    {formatDateTimeWithSeconds(selectedRecord.updatedAt)}
                   </p>
                 </div>
                 <div>

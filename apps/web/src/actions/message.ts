@@ -22,13 +22,13 @@ import {
   SearchUsersRequestSchema,
   SendMessageRequestSchema,
 } from "@repo/shared-types/api/message";
-import crypto from "crypto";
 import { cookies, headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
 import { checkUserOnlineStatus, publishNoticeToUser } from "@/lib/server/ably";
 import { isAblyEnabled } from "@/lib/server/ably-config";
 import { authVerify } from "@/lib/server/auth-verify";
+import { calculateMD5 } from "@/lib/server/crypto";
 import { getConfig } from "@/lib/server/config-cache";
 import { sendNotice } from "@/lib/server/notice";
 import prisma from "@/lib/server/prisma";
@@ -42,12 +42,6 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
-function calculateMD5(text: string): string {
-  return crypto
-    .createHash("md5")
-    .update(text.toLowerCase().trim())
-    .digest("hex");
-}
 /**
  * 检查消息系统是否启用
  */

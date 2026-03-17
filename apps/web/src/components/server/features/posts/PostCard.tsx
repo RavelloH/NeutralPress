@@ -8,6 +8,7 @@ import {
 
 import CMSImage from "@/components/ui/CMSImage";
 import Link from "@/components/ui/Link";
+import { formatDate } from "@/lib/shared/date-format";
 
 interface PostCardProps {
   title: string | React.ReactNode;
@@ -41,20 +42,6 @@ export default function PostCard({
   className = "",
   showAll = false,
 }: PostCardProps) {
-  // 格式化日期显示
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("zh-CN", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
   // 处理封面图片数据
   const coverImage = Array.isArray(cover)
     ? cover[0]

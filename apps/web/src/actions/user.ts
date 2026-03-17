@@ -31,13 +31,13 @@ import {
   UpdateUserProfileSchema,
   UpdateUsersSchema,
 } from "@repo/shared-types/api/user";
-import crypto from "crypto";
 import { updateTag } from "next/cache";
 import { cookies, headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
+import { calculateMD5 } from "@/lib/server/crypto";
 import { type AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
 import { hashPassword } from "@/lib/server/password";
 import prisma from "@/lib/server/prisma";
@@ -52,13 +52,6 @@ type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
-
-function calculateMD5(text: string): string {
-  return crypto
-    .createHash("md5")
-    .update(text.toLowerCase().trim())
-    .digest("hex");
-}
 
 /*
   getUsersTrends - 获取用户趋势数据

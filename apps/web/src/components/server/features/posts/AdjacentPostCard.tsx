@@ -2,6 +2,7 @@ import { RiArrowLeftLine, RiArrowRightLine, RiHashtag } from "@remixicon/react";
 
 import CMSImage from "@/components/ui/CMSImage";
 import Link from "@/components/ui/Link";
+import { formatDateWithDots } from "@/lib/shared/date-format";
 
 interface AdjacentPostCardProps {
   title: string;
@@ -29,22 +30,6 @@ export default function AdjacentPostCard({
   cover,
   direction,
 }: AdjacentPostCardProps) {
-  // 格式化日期显示 - 使用点号分隔，符合瑞士风格
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date
-        .toLocaleDateString("zh-CN", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        })
-        .replace(/\//g, ".");
-    } catch {
-      return dateString;
-    }
-  };
-
   // 处理封面图片数据
   const coverImage = Array.isArray(cover)
     ? cover[0]
@@ -132,7 +117,7 @@ export default function AdjacentPostCard({
 
           {/* 日期与分类 (现在在最下方) */}
           <div className="flex flex-wrap gap-x-3 gap-y-1 uppercase">
-            {date && <span>{formatDate(date)}</span>}
+            {date && <span>{formatDateWithDots(date)}</span>}
             {category && category.length > 0 && (
               <span>{category.map((cat) => cat.name).join(" / ")}</span>
             )}

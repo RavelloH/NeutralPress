@@ -16,31 +16,19 @@ import Link from "@/components/ui/Link";
 import type { PublicProjectDetail } from "@/lib/server/project-public";
 import type { MediaFileInfo } from "@/lib/shared/image-utils";
 import type { ShikiTheme } from "@/lib/shared/mdx-config-shared";
+import {
+  formatDate,
+  formatDateTime,
+} from "@/lib/shared/date-format";
 
 type ProjectDetailVariant = "page" | "modal";
-
-function formatDateTime(value: Date | null): string {
-  if (!value) return "未记录";
-  return new Date(value).toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatDate(value: Date | null): string {
-  if (!value) return "未记录";
-  return new Date(value).toLocaleDateString("zh-CN");
-}
 
 function formatPeriod(
   startedAt: Date | null,
   completedAt: Date | null,
 ): string | null {
-  const start = formatDate(startedAt);
-  const end = completedAt ? formatDate(completedAt) : "至今";
+  const start = formatDate(startedAt, "未记录");
+  const end = completedAt ? formatDate(completedAt, "未记录") : "至今";
 
   if (start === "未记录" && end === "至今") {
     return null;

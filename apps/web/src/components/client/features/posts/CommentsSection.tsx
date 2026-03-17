@@ -45,6 +45,7 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import { useConfig } from "@/context/ConfigContext";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { resolveApiResponse } from "@/lib/client/run-with-auth";
+import { formatDateTime } from "@/lib/shared/date-format";
 import { highlightCode } from "@/lib/shared/mdx-config";
 import type { ConfigType } from "@/types/config";
 import { AlertDialog } from "@/ui/AlertDialog";
@@ -116,15 +117,6 @@ const escapeHtml = (text: string): string => {
   };
   return text.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
 };
-
-const formatDate = (text: string) =>
-  new Date(text).toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
 const mergeBySortKey = (existing: CommentItem[], incoming: CommentItem[]) => {
   const map = new Map(existing.map((c) => [c.id, c]));
@@ -420,7 +412,7 @@ const SingleComment = React.memo(function SingleComment({
                   回复 @{comment.replyTo.authorName}
                 </span>
               )}
-              <span className="text-xs">{formatDate(comment.createdAt)}</span>
+              <span className="text-xs">{formatDateTime(comment.createdAt)}</span>
               {statusBadge && (
                 <span className="text-xs text-error">{statusBadge}</span>
               )}

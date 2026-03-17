@@ -42,7 +42,6 @@ import type {
   ApiResponse,
   ApiResponseData,
 } from "@repo/shared-types/api/common";
-import crypto from "crypto";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 import { after } from "next/server";
@@ -58,6 +57,7 @@ import { authVerify } from "@/lib/server/auth-verify";
 import { generateCacheKey, getCache, setCache } from "@/lib/server/cache";
 import { verifyToken } from "@/lib/server/captcha";
 import { getConfig, getConfigs } from "@/lib/server/config-cache";
+import { calculateMD5 } from "@/lib/server/crypto";
 import { getClientIP } from "@/lib/server/get-client-info";
 import { resolveIpLocation } from "@/lib/server/ip-utils";
 import {
@@ -92,14 +92,6 @@ type CommentTarget =
       ownerUid: number | null;
       updatedAt: Date | null;
     };
-
-// 计算 MD5 哈希值的辅助函数
-function calculateMD5(text: string): string {
-  return crypto
-    .createHash("md5")
-    .update(text.toLowerCase().trim())
-    .digest("hex");
-}
 
 function toAbsolutePath(pathname: string): string {
   return normalizePageSlug(pathname);

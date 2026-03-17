@@ -300,3 +300,38 @@ export const formatLensSpec = (spec: number[]) => {
   }
   return `${minFocal.toFixed(1)}-${maxFocal.toFixed(1)}mm f/${minAperture.toFixed(1)}-${maxAperture.toFixed(1)}`;
 };
+
+// ============================================================================
+// 拍摄时间格式化
+// ============================================================================
+
+export interface ShotDateTimeParts {
+  dateStr: string;
+  offsetTime?: string;
+  subSecTime?: string;
+}
+
+/**
+ * 格式化拍摄时间，返回分离的部分以便分别设置样式
+ */
+export function formatShotDateTime(
+  dateTime: Date | undefined,
+  offsetTime: string | undefined,
+  subSecTime: string | undefined,
+): ShotDateTimeParts | null {
+  if (!dateTime) return null;
+  const date = new Date(dateTime);
+  const dateStr = date.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  return {
+    dateStr,
+    offsetTime: offsetTime || undefined,
+    subSecTime: subSecTime || undefined,
+  };
+}
