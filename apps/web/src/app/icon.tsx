@@ -139,7 +139,10 @@ export default async function Icon({
   const size = metadataItem?.size.width || 192; // 默认 192
 
   return new ImageResponse(
-    <img src={iconSrc} width={size} height={size} alt="Icon" />,
+    (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={iconSrc} width={size} height={size} alt="Icon" />
+    ),
     {
       width: size,
       height: size,

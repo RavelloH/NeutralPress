@@ -1360,7 +1360,7 @@ export async function getAnalyticsStats(
 
     const dailyTrendMap = new Map<
       string,
-      { views: number; visitors: Set<string> }
+      { views: number; visitors: Set<string>; archivedUniqueVisitors: number }
     >();
 
     if (isHourlyMode) {
@@ -1370,7 +1370,11 @@ export async function getAnalyticsStats(
       for (let i = 0; i <= totalHours; i++) {
         const hourDate = new Date(startDate.getTime() + i * 60 * 60 * 1000);
         const hourKey = hourDate.toISOString().substring(0, 13) + ":00:00.000Z"; // YYYY-MM-DDTHH:00:00.000Z 格式
-        dailyTrendMap.set(hourKey, { views: 0, visitors: new Set() });
+        dailyTrendMap.set(hourKey, {
+          views: 0,
+          visitors: new Set(),
+          archivedUniqueVisitors: 0,
+        });
       }
     } else {
       // 天模式：按天初始化
@@ -1379,6 +1383,7 @@ export async function getAnalyticsStats(
         dailyTrendMap.set(getDayStartIsoByDateKey(dateKey), {
           views: 0,
           visitors: new Set(),
+          archivedUniqueVisitors: 0,
         });
       }
     }
@@ -1410,6 +1415,7 @@ export async function getAnalyticsStats(
           trend.views += archive.totalViews;
           // 注意: 归档数据的 uniqueVisitors 是聚合后的，无法精确累加
           // 这里简化处理，直接加上归档的独立访客数
+          trend.archivedUniqueVisitors += archive.uniqueVisitors;
         }
       }
     }
@@ -1418,7 +1424,7 @@ export async function getAnalyticsStats(
       .map(([date, data]) => ({
         date,
         views: data.views,
-        uniqueVisitors: data.visitors.size,
+        uniqueVisitors: data.visitors.size + data.archivedUniqueVisitors,
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
