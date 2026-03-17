@@ -1,10 +1,12 @@
 "use server";
 
 import type { ApiResponse } from "@repo/shared-types/api/common";
+import { createHash } from "crypto";
 import { cookies, headers } from "next/headers";
 
 import { logAuditEvent } from "@/lib/server/audit";
 import { verifyToken } from "@/lib/server/captcha";
+import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import {
   type AccessTokenPayload,
   jwtTokenSign,
@@ -27,6 +29,39 @@ import {
 
 const REAUTH_TOKEN_EXPIRY = 600; // 10 分钟
 
+type ReauthTokenPayload = {
+  uid: number;
+  type?: string;
+  exp: number;
+  ipHash?: string;
+  userAgentHash?: string;
+};
+
+function hashTokenBindingValue(value: string): string | undefined {
+  const normalizedValue = value.trim().toLowerCase();
+  if (!normalizedValue || normalizedValue === "unknown") {
+    return undefined;
+  }
+  return createHash("sha256")
+    .update(normalizedValue)
+    .digest("hex")
+    .slice(0, 32);
+}
+
+async function getReauthTokenBindings(): Promise<{
+  ipHash?: string;
+  userAgentHash?: string;
+}> {
+  const [ip, userAgent] = await Promise.all([
+    getClientIP(),
+    getClientUserAgent(),
+  ]);
+  return {
+    ipHash: hashTokenBindingValue(ip),
+    userAgentHash: hashTokenBindingValue(userAgent),
+  };
+}
+
 /**
  * 检查是否有有效的 REAUTH_TOKEN，并绑定当前登录用户
  */
@@ -40,11 +75,7 @@ export async function checkReauthToken(expectedUid?: number): Promise<boolean> {
     }
 
     // 验证 token 是否有效
-    const decoded = jwtTokenVerify<{
-      uid: number;
-      type?: string;
-      exp: number;
-    }>(reauthToken);
+    const decoded = jwtTokenVerify<ReauthTokenPayload>(reauthToken);
     if (!decoded) {
       return false;
     }
@@ -76,9 +107,25 @@ export async function checkReauthToken(expectedUid?: number): Promise<boolean> {
     const isMatched = decoded.uid === verifyUid;
     if (!isMatched) {
       cookieStore.delete("REAUTH_TOKEN");
+      return false;
     }
 
-    return isMatched;
+    if (decoded.ipHash || decoded.userAgentHash) {
+      const currentBindings = await getReauthTokenBindings();
+      if (decoded.ipHash && decoded.ipHash !== currentBindings.ipHash) {
+        cookieStore.delete("REAUTH_TOKEN");
+        return false;
+      }
+      if (
+        decoded.userAgentHash &&
+        decoded.userAgentHash !== currentBindings.userAgentHash
+      ) {
+        cookieStore.delete("REAUTH_TOKEN");
+        return false;
+      }
+    }
+
+    return true;
   } catch (error) {
     console.error("Check reauth token error:", error);
     return false;
@@ -319,6 +366,8 @@ export async function verifyPasswordForReauth({
 
     // 如果没有启用 TOTP，直接生成 REAUTH_TOKEN
 
+    const bindings = await getReauthTokenBindings();
+
     // 生成 REAUTH_TOKEN
     const expiredAtUnix = Math.floor(Date.now() / 1000) + REAUTH_TOKEN_EXPIRY;
     const reauthToken = jwtTokenSign({
@@ -326,6 +375,7 @@ export async function verifyPasswordForReauth({
         uid: user.uid,
         type: "reauth",
         exp: expiredAtUnix,
+        ...bindings,
       },
       expired: `${REAUTH_TOKEN_EXPIRY}s`,
     });
@@ -522,6 +572,8 @@ export async function verifyTotpForReauth({
     // 清除 TOTP Token
     cookieStore.delete("TOTP_TOKEN");
 
+    const bindings = await getReauthTokenBindings();
+
     // 生成 REAUTH_TOKEN
     const expiredAtUnix = Math.floor(Date.now() / 1000) + REAUTH_TOKEN_EXPIRY;
     const reauthToken = jwtTokenSign({
@@ -529,6 +581,7 @@ export async function verifyTotpForReauth({
         uid: user.uid,
         type: "reauth",
         exp: expiredAtUnix,
+        ...bindings,
       },
       expired: `${REAUTH_TOKEN_EXPIRY}s`,
     });
@@ -670,6 +723,8 @@ export async function verifySSOForReauth({
       }) as unknown as ApiResponse<null>;
     }
 
+    const bindings = await getReauthTokenBindings();
+
     // 生成 REAUTH_TOKEN
     const expiredAtUnix = Math.floor(Date.now() / 1000) + REAUTH_TOKEN_EXPIRY;
     const reauthToken = jwtTokenSign({
@@ -677,6 +732,7 @@ export async function verifySSOForReauth({
         uid: user.uid,
         type: "reauth",
         exp: expiredAtUnix,
+        ...bindings,
       },
       expired: `${REAUTH_TOKEN_EXPIRY}s`,
     });
