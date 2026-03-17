@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 
-import Avatar from "@/../public/avatar.jpg";
 import { LoginButton as UserInfo } from "@/components/client/layout/user/UserInfo";
 import { useConfig } from "@/context/ConfigContext";
 import { useBroadcast } from "@/hooks/use-broadcast";
@@ -202,7 +201,7 @@ export default function HeaderWrapper({
   children: React.ReactNode;
 }) {
   const configuredAvatar = useConfig("site.avatar");
-  const avatarSrc = configuredAvatar?.trim() ? configuredAvatar : Avatar;
+  const avatarSrc = configuredAvatar?.trim() ? configuredAvatar : "/avatar.jpg";
   const { isMenuOpen, setMenuOpen, toggleMenu } = useMenuStore();
   const { setConsoleOpen } = useConsoleStore();
   const headerRef = useRef<HTMLElement>(null);

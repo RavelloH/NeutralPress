@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 
-import Avatar from "@/../public/avatar.jpg";
 import MarqueeText from "@/blocks/collection/HeroGallery/client/MarqueeText";
 import { ProcessedText } from "@/blocks/core/components";
 import { GridItem } from "@/components/client/layout/RowGrid";
@@ -31,7 +30,7 @@ export default function HomeTextSection({
   logoImage,
 }: HomeTextSectionProps) {
   const configuredAvatar = useConfig("site.avatar");
-  const avatarSrc = configuredAvatar?.trim() ? configuredAvatar : Avatar;
+  const avatarSrc = configuredAvatar?.trim() ? configuredAvatar : "/avatar.jpg";
   const isMobile = useMobile();
 
   if (!title && !slogan) return null;

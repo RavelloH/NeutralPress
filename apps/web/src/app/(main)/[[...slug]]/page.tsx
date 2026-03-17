@@ -46,6 +46,12 @@ const BREADCRUMB_LABEL_MAP: Record<string, string> = {
   projects: "项目",
 };
 
+type MainPageProps = {
+  params: Promise<{
+    slug?: string[];
+  }>;
+};
+
 function formatSegmentLabel(segment: string): string {
   const lowered = segment.toLowerCase();
   if (BREADCRUMB_LABEL_MAP[lowered]) {
@@ -90,9 +96,7 @@ function isCollectionPage(pathname: string): boolean {
   );
 }
 
-export const generateMetadata = async ({
-  params,
-}: PageProps<"/[[...slug]]">) => {
+export const generateMetadata = async ({ params }: MainPageProps) => {
   const match = await getMatchingPage((await params).slug);
   if (!match) return notFound();
   const { page, params: resolvedParams } = match;
@@ -123,7 +127,7 @@ export const generateMetadata = async ({
   );
 };
 
-export default async function Page({ params }: PageProps<"/[[...slug]]">) {
+export default async function Page({ params }: MainPageProps) {
   const resolvedParams = await params;
   return renderMainPage(resolvedParams.slug);
 }

@@ -56,7 +56,8 @@ export function PasswordSetTemplate({
 
       {setAt && (
         <EmailParagraph>
-          设置时间：{new Date(setAt).toLocaleString("zh-CN", { timeZone: "UTC" })} (UTC)
+          设置时间：
+          {new Date(setAt).toLocaleString("zh-CN", { timeZone: "UTC" })} (UTC)
         </EmailParagraph>
       )}
 
