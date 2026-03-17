@@ -76,7 +76,20 @@ export async function GET(
     }
 
     // 重定向到目标链接或通知中心
-    const redirectUrl = notice.link || "/notifications";
+    // 安全校验：只允许站内相对路径，防止开放重定向攻击
+    const rawLink = notice.link || "/notifications";
+    let redirectUrl: string;
+    try {
+      const parsed = new URL(rawLink, request.url);
+      const requestOrigin = new URL(request.url).origin;
+      // 只使用路径部分进行重定向，即使 origin 匹配也只取 pathname+search+hash
+      redirectUrl =
+        parsed.origin === requestOrigin
+          ? `${parsed.pathname}${parsed.search}${parsed.hash}`
+          : "/notifications";
+    } catch {
+      redirectUrl = "/notifications";
+    }
     return NextResponse.redirect(new URL(redirectUrl, request.url), {
       status: 302,
     });

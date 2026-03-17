@@ -275,7 +275,31 @@ const nextConfig = () => {
     },
     // 配置缓存头
     async headers() {
+      const securityHeaders = [
+        {
+          key: "X-Frame-Options",
+          value: "SAMEORIGIN",
+        },
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=63072000; includeSubDomains; preload",
+        },
+        {
+          key: "Referrer-Policy",
+          value: "strict-origin-when-cross-origin",
+        },
+        {
+          key: "Permissions-Policy",
+          value: "camera=(), microphone=(), geolocation=()",
+        },
+      ];
+
       return [
+        {
+          // 对所有页面应用安全头
+          source: "/:path*",
+          headers: securityHeaders,
+        },
         {
           source: "/favicon.ico",
           headers: [
