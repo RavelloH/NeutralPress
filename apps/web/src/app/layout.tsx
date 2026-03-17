@@ -21,7 +21,7 @@ import { AnalyticsTracker } from "@/components/client/logic/AnalyticsTracker";
 import { RecentVisitTracker } from "@/components/client/logic/RecentVisitTracker";
 import TokenManager from "@/components/client/logic/TokenManager";
 import Footer from "@/components/server/layout/Footer";
-// Server Componments
+// Server Components
 import Header from "@/components/server/layout/Header";
 import { ConfigProvider } from "@/context/ConfigContext";
 import { getConfig, getConfigs } from "@/lib/server/config-cache";
