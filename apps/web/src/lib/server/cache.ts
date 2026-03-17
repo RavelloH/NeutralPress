@@ -79,17 +79,16 @@ function ensureMemoryCacheSize(): void {
   cleanExpiredMemoryCache();
   if (memoryCache.size < MEMORY_CACHE_MAX_SIZE) return;
 
-  // 仍然超限时，淘汰最早过期的条目
-  let oldestKey: string | null = null;
-  let oldestExpiry = Infinity;
-  for (const [key, item] of memoryCache) {
-    const expiry = item.expiresAt.getTime();
-    if (expiry < oldestExpiry) {
-      oldestExpiry = expiry;
-      oldestKey = key;
-    }
-  }
-  if (oldestKey) memoryCache.delete(oldestKey);
+  // 仍然超限时，淘汰最早过期的条目（为即将写入的新条目预留空间）
+  const entriesToEvict = memoryCache.size - MEMORY_CACHE_MAX_SIZE + 1;
+  if (entriesToEvict <= 0) return;
+
+  const keysToEvict = Array.from(memoryCache.entries())
+    .sort((a, b) => a[1].expiresAt.getTime() - b[1].expiresAt.getTime())
+    .slice(0, entriesToEvict)
+    .map(([key]) => key);
+
+  keysToEvict.forEach((key) => memoryCache.delete(key));
 }
 
 // 定期清理过期缓存（每5分钟）
@@ -200,9 +199,8 @@ export async function setCache<T>(
  */
 export async function deleteCache(
   key: string,
-  options: CacheOptions = {},
+  _options: CacheOptions = {},
 ): Promise<boolean> {
-  const { enableFallback = true } = options;
   let success = false;
 
   // 尝试从 Redis 删除
@@ -217,15 +215,9 @@ export async function deleteCache(
     );
   }
 
-  // 同时从内存缓存删除
-  if (enableFallback) {
-    const deleted = memoryCache.delete(key);
-    if (deleted) {
-      success = true;
-    }
-  }
-
-  return success;
+  // 无论是否启用降级，都尝试从内存缓存删除，避免残留脏数据
+  const memoryDeleted = memoryCache.delete(key);
+  return success || memoryDeleted;
 }
 
 /**
