@@ -104,7 +104,7 @@ export function formatDateTimeLocale(date: DateInput, fallback = "-"): string {
  * 判断值是否为 ISO 8601 日期字符串
  * @param value 输入值
  */
-export function isDateString(value: unknown): value is string {
+export function isDateString(value: unknown): boolean {
   if (typeof value !== "string") return false;
 
   const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
