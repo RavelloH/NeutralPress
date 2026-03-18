@@ -66,7 +66,6 @@ interface MediaGridItemProps {
 }
 
 // 提取图片卡片为独立组件并使用 memo
-/* eslint-disable react/prop-types */
 const MediaGridItem = memo<MediaGridItemProps>(
   ({
     item,
@@ -258,7 +257,6 @@ const MediaGridItem = memo<MediaGridItemProps>(
     );
   },
 );
-/* eslint-enable react/prop-types */
 
 MediaGridItem.displayName = "MediaGridItem";
 
@@ -275,7 +273,6 @@ interface FolderGridItemProps {
 }
 
 // 文件夹卡片组件（同时可拖拽和可放置）
-/* eslint-disable react/prop-types */
 const FolderGridItem = memo<FolderGridItemProps>(
   ({
     folder,
@@ -414,7 +411,6 @@ const FolderGridItem = memo<FolderGridItemProps>(
     );
   },
 );
-/* eslint-enable react/prop-types */
 
 FolderGridItem.displayName = "FolderGridItem";
 

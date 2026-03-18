@@ -17,7 +17,15 @@
     "CACHE_BOOTSTRAP_INTERVAL_MS",
     "BUILD_STANDALONE",
     "BUILD_PROFILE",
-    "PRISMA_CLI_PATH"
+    "PRISMA_CLI_PATH",
+    "VERCEL_GIT_COMMIT_SHA",
+    "VERCEL_BUILD_ID",
+    "VERCEL_GIT_COMMIT_TIMESTAMP",
+    "GITHUB_SHA",
+    "GITHUB_RUN_ID",
+    "COMMIT_SHA",
+    "BUILD_ID",
+    "BUILD_TIME"
   ],
   "tasks": {
     "build": {

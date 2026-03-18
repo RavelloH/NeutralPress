@@ -1,6 +1,5 @@
 import "server-only";
 
-/* eslint-disable turbo/no-undeclared-env-vars */
 import fs from "node:fs/promises";
 import path from "node:path";
 
