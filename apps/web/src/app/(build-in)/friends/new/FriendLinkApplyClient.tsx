@@ -26,6 +26,7 @@ import AreaChart, {
 import { CaptchaButton } from "@/components/ui/CaptchaButton";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { formatDateTimeLocale } from "@/lib/shared/date-format";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
@@ -34,7 +35,6 @@ import Clickable from "@/ui/Clickable";
 import { Input } from "@/ui/Input";
 import { Table, type TableColumn } from "@/ui/Table";
 import { useToast } from "@/ui/Toast";
-import { formatDateTimeLocale } from "@/lib/shared/date-format";
 
 interface FriendLinkApplyClientProps {
   currentUser: FriendLinkApplyUser | null;

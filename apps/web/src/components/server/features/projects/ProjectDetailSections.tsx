@@ -14,12 +14,9 @@ import UniversalRenderer from "@/components/server/renderer/UniversalRenderer";
 import CMSImage from "@/components/ui/CMSImage";
 import Link from "@/components/ui/Link";
 import type { PublicProjectDetail } from "@/lib/server/project-public";
+import { formatDate, formatDateTime } from "@/lib/shared/date-format";
 import type { MediaFileInfo } from "@/lib/shared/image-utils";
 import type { ShikiTheme } from "@/lib/shared/mdx-config-shared";
-import {
-  formatDate,
-  formatDateTime,
-} from "@/lib/shared/date-format";
 
 type ProjectDetailVariant = "page" | "modal";
 

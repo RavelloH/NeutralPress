@@ -23,7 +23,6 @@ import {
   formatSceneCaptureType,
   formatSensingMethod,
   formatShotDateTime,
-  type ShotDateTimeParts,
   formatWhiteBalance,
   type ParsedExifData,
   parseExifBuffer,

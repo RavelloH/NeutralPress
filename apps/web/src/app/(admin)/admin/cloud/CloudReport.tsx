@@ -19,6 +19,7 @@ import {
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { formatDateTimeWithSeconds } from "@/lib/shared/date-format";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
 import Clickable from "@/ui/Clickable";
@@ -27,7 +28,6 @@ import { Input } from "@/ui/Input";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { Switch } from "@/ui/Switch";
 import { useToast } from "@/ui/Toast";
-import { formatDateTimeWithSeconds } from "@/lib/shared/date-format";
 
 const CLOUD_STATUS_LABELS: Record<string, string> = {
   active: "已激活",
@@ -152,7 +152,9 @@ function buildSummary(
       `云端状态：${remoteStatus}；事件总数 ${remote.eventsTotal ?? "-"}，成功率 ${formatRate(remote.successRate)}。`,
     );
     if (remote.registeredAt) {
-      lines.push(`注册时间：${formatDateTimeWithSeconds(remote.registeredAt)}。`);
+      lines.push(
+        `注册时间：${formatDateTimeWithSeconds(remote.registeredAt)}。`,
+      );
     }
     const localMinuteSlot = utcMinuteToLocalHhMm(remote.minuteOfDay);
     if (localMinuteSlot) {
