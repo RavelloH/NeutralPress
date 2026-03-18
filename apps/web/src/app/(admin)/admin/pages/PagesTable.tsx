@@ -22,6 +22,7 @@ import GridTable from "@/components/ui/GridTable";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import runWithAuth from "@/lib/client/run-with-auth";
+import { isDateString } from "@/lib/shared/date-format";
 import { getPageEditorPathByContentType } from "@/lib/shared/page-editor-route";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";
@@ -101,19 +102,6 @@ interface PageFormState {
   metaKeywords: string;
   robotsIndex: boolean;
 }
-
-// 判断是否为日期字符串（从 SettingsSheet 复制）
-const isDateString = (value: unknown): boolean => {
-  if (typeof value !== "string") return false;
-
-  // ISO 8601 格式检测
-  const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
-  if (!isoDateRegex.test(value)) return false;
-
-  // 验证是否为有效日期
-  const date = new Date(value);
-  return !isNaN(date.getTime());
-};
 
 // 获取页面配置字段输入组件配置（参考 SettingsSheet 的 getInputConfig）
 const getPageConfigInputConfig = (

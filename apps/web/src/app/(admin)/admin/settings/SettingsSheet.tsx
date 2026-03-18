@@ -13,6 +13,7 @@ import {
 } from "@/data/default-configs";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import runWithAuth from "@/lib/client/run-with-auth";
+import { isDateString } from "@/lib/shared/date-format";
 import generateGradient from "@/lib/shared/gradient";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
@@ -498,19 +499,6 @@ export default function SettingSheet() {
     setRawJsonValues({});
     setRawJsonErrors({});
     fetchSettings();
-  };
-
-  // 判断是否为日期字符串
-  const isDateString = (value: unknown): boolean => {
-    if (typeof value !== "string") return false;
-
-    // ISO 8601 格式检测
-    const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
-    if (!isoDateRegex.test(value)) return false;
-
-    // 验证是否为有效日期
-    const date = new Date(value);
-    return !isNaN(date.getTime());
   };
 
   // 获取原始显示值（不考虑编辑状态）
