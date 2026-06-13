@@ -55,6 +55,19 @@
         "BUILD_PROFILE"
       ]
     },
+    "lint:ci": {
+      "outputs": [],
+      "env": [
+        "NODE_ENV",
+        "JWT_PRIVATE_KEY",
+        "JWT_PUBLIC_KEY",
+        "MASTER_SECRET",
+        "CACHE_BOOTSTRAP_URL",
+        "CACHE_BOOTSTRAP_RETRIES",
+        "CACHE_BOOTSTRAP_INTERVAL_MS",
+        "BUILD_PROFILE"
+      ]
+    },
     "format": {
       "inputs": ["$TURBO_DEFAULT$", ".prettierrc", ".prettierignore"],
       "outputs": []
