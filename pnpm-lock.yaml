@@ -8,7 +8,7 @@ overrides:
   glob: ^11.1.0
   tar: ^7.5.7
   jws: ^3.2.3
-  qs: ^6.14.2
+  qs: ^6.15.2
   dompurify: ^3.3.3
   js-yaml: ^4.1.1
   mdast-util-to-hast: ^13.2.1
@@ -22,7 +22,7 @@ overrides:
   immutable: ^5.1.5
   yaml: ^2.8.3
   brace-expansion@<1.1.13: 1.1.13
-  brace-expansion@>=5.0.0 <5.0.5: 5.0.5
+  brace-expansion@>=5.0.0 <5.0.6: 5.0.6
   fast-xml-parser@<5.5.10: 5.5.10
   markdown-it@>=13.0.0 <14.1.1: 14.1.1
   path-to-regexp@>=8.0.0 <8.4.0: 8.4.2
@@ -4674,7 +4674,7 @@ packages:
     resolution: {integrity: sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw==}
     engines: {node: '>=12'}
 
-  eslint-config-next@16.2.6:
+  eslint-config-next@16.2.9:
     resolution: {integrity: sha512-z2ELYSkyrrJ6cuunTU8vhsT/RpouPkjaSah06nVW6Rg2Hpg0Vs8s497/e5s8G8qtdp4ccsiovz5P1rv+5VSW2Q==}
     peerDependencies:
       eslint: '>=9.0.0'
@@ -6072,7 +6072,7 @@ packages:
       react: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
       react-dom: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
 
-  next@16.2.6:
+  next@16.2.9:
     resolution: {integrity: sha512-qOVgKJg1+At15NpeUP+eJgCHvTCgXsogweq87Ri/Ix7PkqQHg4sdaXmSFqKlgaIXE4kW0g25LE68W87UANlHtw==}
     engines: {node: '>=20.9.0'}
     hasBin: true

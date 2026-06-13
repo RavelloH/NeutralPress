@@ -214,25 +214,17 @@ async function runMigrateDeploy(): Promise<void> {
   try {
     rlog.info("> Running prisma migrate deploy...");
 
-    // 确保 .prisma/client 存在
-    const clientPath = path.join(
-      process.cwd(),
-      "node_modules",
-      ".prisma",
-      "client",
+    const { runPrismaMigrateDeploy } = await import(
+      "@/lib/server/prisma-migrate"
     );
-    if (!fs.existsSync(clientPath)) {
-      rlog.info("  Generating Prisma client first...");
-      execSync("npx prisma generate", {
-        stdio: "pipe",
-        cwd: process.cwd(),
-      });
-    }
 
-    const output = execSync("npx prisma migrate deploy", {
-      stdio: "pipe",
+    let output = "";
+    await runPrismaMigrateDeploy({
       cwd: process.cwd(),
-      encoding: "utf-8",
+      logger: (line: string) => {
+        output += line + "\n";
+        rlog.info(line);
+      },
     });
 
     // 如果输出包含有用信息，显示它

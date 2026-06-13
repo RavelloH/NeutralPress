@@ -103,6 +103,23 @@ function splitLines(value: string): string[] {
     .filter((line) => line.length > 0);
 }
 
+function runPrismaGenerate(
+  cliPath: string,
+  schemaPath: string,
+  cwd: string,
+): void {
+  const genArgs = [cliPath, "generate", "--schema", schemaPath];
+  execFileSync(process.execPath, genArgs, {
+    cwd,
+    env: {
+      ...process.env,
+      PRISMA_HIDE_UPDATE_MESSAGE: "1",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
 export async function runPrismaMigrateDeploy(options?: {
   cwd?: string;
   logger?: Logger;
@@ -112,6 +129,13 @@ export async function runPrismaMigrateDeploy(options?: {
   const cliPath = resolvePrismaCliPath(cwd);
   const schemaPath = resolvePrismaSchemaPath(cwd);
   const configPath = resolvePrismaConfigPath(cwd);
+
+  // 先执行 prisma generate，确保 Prisma Client 已生成
+  const clientPath = path.join(cwd, "node_modules", ".prisma", "client");
+  if (!fs.existsSync(clientPath)) {
+    runPrismaGenerate(cliPath, schemaPath, cwd);
+  }
+
   const cliArgs = [cliPath, "migrate", "deploy", "--schema", schemaPath];
 
   if (configPath) {
