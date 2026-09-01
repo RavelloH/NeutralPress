@@ -505,9 +505,9 @@ export async function createPage(
       });
     });
 
-    // 刷新缓存标签
-    // 只刷新当前页面的缓存，不刷新所有页面
+    // 刷新当前页面及页面集合缓存，确保 sitemap 能感知新增页面
     updateTag(`pages/${newPage.id}`);
+    updateTag("pages");
 
     return response.created({ data: result });
   } catch (error) {
@@ -708,9 +708,9 @@ export async function updatePage(
       });
     }
 
-    // 刷新缓存标签
-    // 只刷新当前页面的缓存，不刷新所有页面
+    // 刷新当前页面及页面集合缓存，确保 sitemap 能感知页面更新
     updateTag(`pages/${originalPage.id}`);
+    updateTag("pages");
 
     return response.ok({ data: result });
   } catch (error) {

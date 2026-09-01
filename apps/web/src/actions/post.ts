@@ -1801,8 +1801,11 @@ export async function createPost(
     updateTagCacheTagsBySlugs(tagDetailTagsToRefresh);
     updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
 
-    if (post.status === "PUBLISHED") {
+    if (post.status === "PUBLISHED" || post.status === "ARCHIVED") {
       updateTag("posts/list");
+    }
+
+    if (post.status === "PUBLISHED") {
       updateTag("tags/list");
       updateTag("categories/list");
     }
@@ -2880,10 +2883,14 @@ export async function updatePosts(
       updateTag("categories/list");
     }
 
-    const hasPublishedBeforeUpdate = postsBeforeUpdate.some(
-      (post) => post.status === "PUBLISHED",
+    const hasPublicVisibleBeforeUpdate = postsBeforeUpdate.some(
+      (post) => post.status === "PUBLISHED" || post.status === "ARCHIVED",
     );
-    if (hasPublishedBeforeUpdate || status === "PUBLISHED") {
+    if (
+      hasPublicVisibleBeforeUpdate ||
+      status === "PUBLISHED" ||
+      status === "ARCHIVED"
+    ) {
       updateTag("posts/list");
     }
 
@@ -3049,11 +3056,13 @@ export async function deletePosts(
     updateTagCacheTagsBySlugs(tagDetailTagsToRefresh);
     updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
 
-    const hasPublishedDeletion = postsToDelete.some(
-      (post) => post.status === "PUBLISHED",
+    const hasPublicVisibleDeletion = postsToDelete.some(
+      (post) => post.status === "PUBLISHED" || post.status === "ARCHIVED",
     );
-    if (hasPublishedDeletion) {
+    if (hasPublicVisibleDeletion) {
       updateTag("posts/list");
+    }
+    if (postsToDelete.some((post) => post.status === "PUBLISHED")) {
       updateTag("tags/list");
       updateTag("categories/list");
     }

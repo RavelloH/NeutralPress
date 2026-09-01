@@ -18,7 +18,7 @@ import { MEDIA_SLOTS } from "@/types/media";
 
 import type { Prisma } from ".prisma/client";
 
-const PUBLIC_PROJECT_STATUSES = [
+export const PUBLIC_PROJECT_STATUSES = [
   "PUBLISHED",
   "DEVELOPING",
   "ARCHIVED",

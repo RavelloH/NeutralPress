@@ -1,49 +1,72 @@
 import type { MetadataRoute } from "next";
 
-import { getFeedData } from "@/lib/server/feed-data";
+import { getSitemapData } from "@/lib/server/sitemap-data";
+
+function normalizePath(pathname: string): string {
+  const trimmed = pathname.trim();
+  if (!trimmed || trimmed === "/") return "/";
+
+  const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  const normalized = withLeadingSlash.replace(/\/{2,}/g, "/");
+  const withoutTrailingSlash = normalized.replace(/\/+$/g, "");
+
+  return withoutTrailingSlash || "/";
+}
+
+function isDynamicPath(pathname: string): boolean {
+  return pathname.split("/").some((segment) => segment.includes(":"));
+}
+
+function createUrl(baseUrl: string, pathname: string): string | null {
+  const normalizedPath = normalizePath(pathname);
+  if (isDynamicPath(normalizedPath)) return null;
+
+  return normalizedPath === "/" ? baseUrl : `${baseUrl}${normalizedPath}`;
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const { posts, pages, categories, tags, siteConfig } = await getFeedData();
-  const baseUrl = siteConfig.url;
+  const { posts, projects, pages, categories, tags, baseUrl } =
+    await getSitemapData();
+  const entries = new Map<string, MetadataRoute.Sitemap[number]>();
 
-  const postEntries: MetadataRoute.Sitemap = posts.map((post) => ({
-    url: `${baseUrl}/posts/${post.slug}`,
-    lastModified: post.updatedAt,
-    changeFrequency: "weekly",
-    priority: 0.7,
-  }));
+  const addEntry = (
+    pathname: string,
+    lastModified: Date,
+    changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"],
+    priority: number,
+  ) => {
+    const url = createUrl(baseUrl, pathname);
+    if (!url || entries.has(url)) return;
 
-  const pageEntries: MetadataRoute.Sitemap = pages.map((page) => ({
-    url: `${baseUrl}/${page.slug}`,
-    lastModified: page.updatedAt,
-    changeFrequency: "monthly",
-    priority: 0.5,
-  }));
+    entries.set(url, {
+      url,
+      lastModified,
+      changeFrequency,
+      priority,
+    });
+  };
 
-  const categoryEntries: MetadataRoute.Sitemap = categories.map((category) => ({
-    url: `${baseUrl}/categories/${category.slug}`,
-    lastModified: category.updatedAt,
-    changeFrequency: "weekly",
-    priority: 0.6,
-  }));
+  addEntry("/", new Date(), "daily", 1);
 
-  const tagEntries: MetadataRoute.Sitemap = tags.map((tag) => ({
-    url: `${baseUrl}/tags/${tag.slug}`,
-    lastModified: tag.updatedAt,
-    changeFrequency: "weekly",
-    priority: 0.6,
-  }));
+  for (const post of posts) {
+    addEntry(`/posts/${post.slug}`, post.updatedAt, "weekly", 0.7);
+  }
 
-  return [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 1,
-    },
-    ...postEntries,
-    ...pageEntries,
-    ...categoryEntries,
-    ...tagEntries,
-  ];
+  for (const project of projects) {
+    addEntry(`/projects/${project.slug}`, project.updatedAt, "weekly", 0.7);
+  }
+
+  for (const page of pages) {
+    addEntry(page.slug, page.updatedAt, "monthly", 0.5);
+  }
+
+  for (const category of categories) {
+    addEntry(`/categories/${category.slug}`, category.updatedAt, "weekly", 0.6);
+  }
+
+  for (const tag of tags) {
+    addEntry(`/tags/${tag.slug}`, tag.updatedAt, "weekly", 0.6);
+  }
+
+  return Array.from(entries.values());
 }

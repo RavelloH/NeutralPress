@@ -44,11 +44,18 @@ import {
   getFeaturedImageUrl,
 } from "@/lib/server/media-reference";
 import prisma from "@/lib/server/prisma";
+import { PUBLIC_PROJECT_STATUSES } from "@/lib/server/project-public";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
 import { slugify } from "@/lib/server/slugify";
 import { validateData } from "@/lib/server/validator";
 import { MEDIA_SLOTS } from "@/types/media";
+
+function isPublicProjectStatus(status: string): boolean {
+  return PUBLIC_PROJECT_STATUSES.some(
+    (publicStatus) => publicStatus === status,
+  );
+}
 
 /*
   辅助函数：处理内容中的图片并提取引用关系
@@ -1406,6 +1413,10 @@ export async function createProject(
 
     // 更新缓存标签
     updateProjectCacheTagsBySlugs([project.slug]);
+    if (isPublicProjectStatus(project.status)) {
+      updateTag("projects/list");
+    }
+
     if (project.status === "PUBLISHED") {
       const tagDetailTagsToRefresh = new Set<string>();
       const categoryDetailTagsToRefresh = new Set<string>();
@@ -1416,7 +1427,6 @@ export async function createProject(
       );
       updateTagCacheTagsBySlugs(tagDetailTagsToRefresh);
       updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
-      updateTag("projects/list");
       updateTag("tags/list");
       updateTag("categories/list");
     }
@@ -1777,9 +1787,9 @@ export async function updateProject(
     updateTagCacheTagsBySlugs(tagDetailTagsToRefresh);
     updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
 
-    const wasPublished = existingProject.status === "PUBLISHED";
-    const isPublished = updatedProject.status === "PUBLISHED";
-    if (wasPublished || isPublished) {
+    const wasPublic = isPublicProjectStatus(existingProject.status);
+    const isPublic = isPublicProjectStatus(updatedProject.status);
+    if (wasPublic || isPublic) {
       updateTag("projects/list");
     }
 
@@ -1787,7 +1797,7 @@ export async function updateProject(
       (tags !== undefined ||
         categories !== undefined ||
         status !== undefined) &&
-      (wasPublished || isPublished)
+      (wasPublic || isPublic)
     ) {
       updateTag("tags/list");
       updateTag("categories/list");
