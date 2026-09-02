@@ -46,7 +46,7 @@
     "@repo/shared-types": "workspace:*",
     "@simplewebauthn/browser": "^13.2.2",
     "@simplewebauthn/server": "^13.2.2",
-    "@tiptap/core": "^3.16.0",
+    "@tiptap/core": "^3.30.4",
     "@tiptap/extension-character-count": "^3.15.3",
     "@tiptap/extension-heading": "^3.15.3",
     "@tiptap/extension-highlight": "^3.15.3",
