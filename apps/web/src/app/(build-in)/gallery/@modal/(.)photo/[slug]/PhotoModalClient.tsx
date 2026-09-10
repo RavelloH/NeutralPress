@@ -77,6 +77,15 @@ function formatGpsSpeed(speed: number, ref?: string): string {
   return `${speed.toFixed(1)} ${unit}`;
 }
 
+function getExifOrientation(exif: unknown): number | undefined {
+  if (!exif || typeof exif !== "object" || Array.isArray(exif)) {
+    return undefined;
+  }
+
+  const orientation = (exif as { orientation?: unknown }).orientation;
+  return typeof orientation === "number" ? orientation : undefined;
+}
+
 interface PhotoWithMedia {
   id: number;
   slug: string;
@@ -126,6 +135,10 @@ export default function PhotoModalClient({
   const [isOpen, setIsOpen] = useState(true);
   const [isClosing, setIsClosing] = useState(false);
   const [hdImageLoaded, setHdImageLoaded] = useState(false);
+  const [loadedImageDimensions, setLoadedImageDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
   const [openAnimationComplete, setOpenAnimationComplete] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -143,6 +156,41 @@ export default function PhotoModalClient({
   const openedPhotoId = useGalleryLightboxStore((s) => s.openedPhotoId);
   const thumbnailUrl = useGalleryLightboxStore((s) => s.thumbnailUrl);
   const clearStore = useGalleryLightboxStore((s) => s.clear);
+
+  const metadataImageDimensions = useMemo(() => {
+    const width = photo.media.width || 800;
+    const height = photo.media.height || 600;
+    const orientation = getExifOrientation(photo.media.exif);
+
+    // EXIF 5-8 表示图片需要旋转 90 度，数据库中的宽高仍可能是旋转前的值。
+    if (orientation !== undefined && orientation >= 5 && orientation <= 8) {
+      return { width: height, height: width };
+    }
+
+    return { width, height };
+  }, [photo.media.exif, photo.media.height, photo.media.width]);
+
+  const handleHdImageLoad = useCallback(
+    (event: React.SyntheticEvent<HTMLImageElement>) => {
+      const { naturalWidth, naturalHeight } = event.currentTarget;
+
+      if (naturalWidth > 0 && naturalHeight > 0) {
+        setLoadedImageDimensions((previous) => {
+          if (
+            previous?.width === naturalWidth &&
+            previous.height === naturalHeight
+          ) {
+            return previous;
+          }
+
+          return { width: naturalWidth, height: naturalHeight };
+        });
+      }
+
+      setHdImageLoaded(true);
+    },
+    [],
+  );
 
   // 隐藏原图
   const hideOriginalImage = useCallback(() => {
@@ -386,8 +434,8 @@ export default function PhotoModalClient({
     }
 
     // 图片原始尺寸
-    const naturalWidth = photo.media.width || 800;
-    const naturalHeight = photo.media.height || 600;
+    const { width: naturalWidth, height: naturalHeight } =
+      loadedImageDimensions || metadataImageDimensions;
 
     // 计算适配的尺寸
     const widthRatio = maxImageWidth / naturalWidth;
@@ -446,10 +494,14 @@ export default function PhotoModalClient({
       containerX,
       containerY,
     };
-  }, [photo.media.width, photo.media.height, sourceRect, isMobile]);
+  }, [loadedImageDimensions, metadataImageDimensions, sourceRect, isMobile]);
 
   // 如果没有 geometry，不渲染
   if (!geometry) return null;
+
+  // 过渡期间需要填满源卡片，避免宽高比变化时出现黑边；静止后再完整显示原图。
+  const modalImageObjectFit =
+    openAnimationComplete && !isClosing ? "object-contain" : "object-cover";
 
   // 上传者信息
   const uploader = photo.media.user;
@@ -970,7 +1022,7 @@ export default function PhotoModalClient({
                   initial={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="absolute inset-0 w-full h-full object-cover z-[1]"
+                  className={`absolute inset-0 w-full h-full ${modalImageObjectFit} z-[1]`}
                   draggable={false}
                   onLoad={handleThumbnailLoad}
                 />
@@ -983,10 +1035,10 @@ export default function PhotoModalClient({
               fill
               sizes="(max-width: 768px) 100vw, 80vw"
               priority
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 z-[2] ${
+              className={`absolute inset-0 w-full h-full ${modalImageObjectFit} transition-opacity duration-300 z-[2] ${
                 hdImageLoaded ? "opacity-100" : "opacity-0"
               }`}
-              onLoad={() => setHdImageLoaded(true)}
+              onLoad={handleHdImageLoad}
               data-lightbox
             />
           </motion.div>
