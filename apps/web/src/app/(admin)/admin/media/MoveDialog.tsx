@@ -8,12 +8,12 @@ import {
   RiFolderLine,
 } from "@remixicon/react";
 
-import type { FolderItem } from "@/actions/media";
 import { createFolder } from "@/actions/media";
 import {
   getAccessibleFolders,
   getFolderBreadcrumb,
 } from "@/lib/client/folder-utils";
+import type { FolderItem } from "@/lib/shared/media-types";
 import type { BreadcrumbItem } from "@/types/media-table";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";

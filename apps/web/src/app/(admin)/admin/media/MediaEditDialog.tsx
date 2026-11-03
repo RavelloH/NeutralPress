@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import type { GallerySize, MediaListItem } from "@repo/shared-types/api/media";
 
-import { getMediaDetail, updateMedia } from "@/actions/media";
+import { updateMedia } from "@/actions/media";
+import { getMediaDetail } from "@/lib/client/api/media-read";
 import {
   formatAperture,
   formatExposureBias,

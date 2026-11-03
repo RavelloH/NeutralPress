@@ -16,11 +16,7 @@ import type {
 } from "@repo/shared-types/api/post";
 import { useParams } from "next/navigation";
 
-import {
-  getPostHistory,
-  resetPostToVersion,
-  squashPostToVersion,
-} from "@/actions/post";
+import { resetPostToVersion, squashPostToVersion } from "@/actions/post";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
@@ -32,6 +28,7 @@ import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import type { ActionButton } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import Link, { useNavigateWithTransition } from "@/components/ui/Link";
+import { getPostHistory } from "@/lib/client/api/post-read";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";

@@ -35,10 +35,10 @@ import {
 import type { MediaListItem } from "@repo/shared-types/api/media";
 import { AnimatePresence, motion } from "framer-motion";
 
-import type { FolderItem } from "@/actions/media";
 import CMSImage from "@/components/ui/CMSImage";
 import GridTable from "@/components/ui/GridTable";
 import Link from "@/components/ui/Link";
+import type { FolderItem } from "@/lib/shared/media-types";
 import type { MediaTableViewProps, TableRowItem } from "@/types/media-table";
 import { Button } from "@/ui/Button";
 import Clickable from "@/ui/Clickable";

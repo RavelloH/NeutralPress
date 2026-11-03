@@ -28,7 +28,6 @@ import {
   deleteMedia,
   ensureUserHomeFolder,
   type FolderItem,
-  getMediaDetail,
   getMediaExplorerPage,
   moveItems,
 } from "@/actions/media";
@@ -41,6 +40,7 @@ import RowGrid from "@/components/client/layout/RowGrid";
 import type { FilterConfig } from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { useMobile } from "@/hooks/use-mobile";
+import { getMediaDetail } from "@/lib/client/api/media-read";
 import type { SelectedItems } from "@/types/media-table";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoTransition } from "@/ui/AutoTransition";

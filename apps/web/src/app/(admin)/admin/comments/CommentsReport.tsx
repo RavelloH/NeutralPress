@@ -3,10 +3,10 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
 
-import { getCommentStats } from "@/actions/comment";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { getCommentStats } from "@/lib/client/api/comment-read";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

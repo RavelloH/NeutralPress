@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
 
-import { getMediaStats } from "@/actions/media";
 import ErrorPage from "@/components/ui/Error";
 import Link from "@/components/ui/Link";
+import { getMediaStats } from "@/lib/client/api/media-read";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

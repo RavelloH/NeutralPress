@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useInView } from "react-intersection-observer";
 
-import { getGalleryPhotos } from "@/actions/media";
 import GalleryGrid from "@/app/(build-in)/gallery/GalleryGrid";
 import GalleryListMobile from "@/app/(build-in)/gallery/GalleryListMobile";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import { useMobile } from "@/hooks/use-mobile";
+import { getGalleryPhotos } from "@/lib/client/api/media-read";
 import type { GalleryPhoto, LayoutState, Tile } from "@/lib/gallery-layout";
 import { generateLayout } from "@/lib/gallery-layout";
 import { generateSkeletonPhotos } from "@/lib/gallery-skeleton";

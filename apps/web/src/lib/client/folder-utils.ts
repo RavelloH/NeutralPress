@@ -1,9 +1,9 @@
 // 文件夹相关工具函数
-import type { BreadcrumbItem, FolderItem } from "@/actions/media";
 import {
   getAccessibleFolders as getAccessibleFoldersAction,
   getFolderBreadcrumb as getFolderBreadcrumbAction,
-} from "@/actions/media";
+} from "@/lib/client/api/media-read";
+import type { BreadcrumbItem, FolderItem } from "@/lib/shared/media-types";
 
 // 重新导出类型
 export type { FolderItem, BreadcrumbItem };
@@ -18,16 +18,13 @@ export interface GetFoldersResult {
  * 根据用户角色获取可访问的文件夹列表
  */
 export async function getAccessibleFolders(
-  userRole: string,
-  userUid: number,
-  accessToken: string,
+  _userRole: string,
+  _userUid: number,
+  _accessToken: string,
   parentId?: number | null,
 ): Promise<GetFoldersResult> {
   try {
     const result = await getAccessibleFoldersAction({
-      access_token: accessToken,
-      userRole,
-      userUid,
       parentId,
     });
 
@@ -52,7 +49,7 @@ export async function getAccessibleFolders(
  */
 export async function getFolderBreadcrumb(
   folderId: number | null,
-  accessToken: string,
+  _accessToken: string,
 ): Promise<BreadcrumbItem[]> {
   if (!folderId) {
     return [{ id: null, name: "全部" }];
@@ -60,7 +57,6 @@ export async function getFolderBreadcrumb(
 
   try {
     const result = await getFolderBreadcrumbAction({
-      access_token: accessToken,
       folderId,
     });
 

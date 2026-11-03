@@ -6,12 +6,12 @@ import { RiArrowLeftSLine } from "@remixicon/react";
 import type { PostVersionDetail } from "@repo/shared-types/api/post";
 import { useParams } from "next/navigation";
 
-import { getPostVersion } from "@/actions/post";
 import AdminSidebar from "@/components/client/layout/AdminSidebar";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import { useNavigateWithTransition } from "@/components/ui/Link";
+import { getPostVersion } from "@/lib/client/api/post-read";
 import { Button } from "@/ui/Button";
 import Clickable from "@/ui/Clickable";
 

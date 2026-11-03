@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { MediaTrendItem } from "@repo/shared-types/api/media";
 
-import { getMediaTrends } from "@/actions/media";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
@@ -11,6 +10,7 @@ import AreaChart, {
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getMediaTrends } from "@/lib/client/api/media-read";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 

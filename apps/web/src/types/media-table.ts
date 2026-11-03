@@ -3,8 +3,8 @@
  */
 import type { MediaDetail, MediaListItem } from "@repo/shared-types/api/media";
 
-import type { FolderItem } from "@/actions/media";
 import type { FilterConfig } from "@/components/ui/GridTable";
+import type { FolderItem } from "@/lib/shared/media-types";
 
 // 表格行项目联合类型（文件夹 + 媒体）
 export type TableRowItem =

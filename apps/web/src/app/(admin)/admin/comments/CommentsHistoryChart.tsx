@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CommentHistoryPoint } from "@repo/shared-types/api/comment";
 
-import { getCommentHistory } from "@/actions/comment";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
@@ -16,6 +15,7 @@ import { GridItem } from "@/components/client/layout/RowGrid";
 import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getCommentHistory } from "@/lib/client/api/comment-read";
 import runWithAuth from "@/lib/client/run-with-auth";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";

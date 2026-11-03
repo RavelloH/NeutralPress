@@ -34,8 +34,6 @@ import remarkMath from "remark-math";
 import {
   createComment,
   deleteOwnComment,
-  getDirectChildren,
-  getPostComments,
   likeComment,
   unlikeComment,
 } from "@/actions/comment";
@@ -45,6 +43,10 @@ import { useNavigateWithTransition } from "@/components/ui/Link";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useConfig } from "@/context/ConfigContext";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import {
+  getDirectChildren,
+  getPostComments,
+} from "@/lib/client/api/comment-read";
 import { resolveApiResponse } from "@/lib/client/run-with-auth";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { formatDateTime } from "@/lib/shared/date-format";

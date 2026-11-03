@@ -16,12 +16,7 @@ import {
 } from "@remixicon/react";
 import type { PostListItem } from "@repo/shared-types/api/post";
 
-import {
-  deletePosts,
-  getPostsList,
-  updatePost,
-  updatePosts,
-} from "@/actions/post";
+import { deletePosts, updatePost, updatePosts } from "@/actions/post";
 import { createTag } from "@/actions/tag";
 import { CategoryInput } from "@/components/client/features/categories/CategoryInput";
 import MediaSelector from "@/components/client/features/media/MediaSelector";
@@ -40,6 +35,7 @@ import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import Link, { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getPostsList } from "@/lib/client/api/post-read";
 import {
   fromStoredPostLicense,
   type PostLicenseSelection,

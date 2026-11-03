@@ -16,7 +16,6 @@ import {
 import { type MediaListItem } from "@repo/shared-types/api/media";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { getMediaList } from "@/actions/media";
 import FolderPickerDialog from "@/app/(admin)/admin/media/FolderPickerDialog";
 import CMSImage from "@/components/ui/CMSImage";
 import { FileListItem } from "@/components/ui/FileListItem";
@@ -28,6 +27,7 @@ import { useMediaImport } from "@/hooks/use-media-import";
 import { type ProcessMode, useMediaUpload } from "@/hooks/use-media-upload";
 import { useStorageProviders } from "@/hooks/use-storage-providers";
 import { useUserInfo } from "@/hooks/use-user-info";
+import { getMediaList } from "@/lib/client/api/media-read";
 import {
   type BreadcrumbItem,
   type FolderItem,

@@ -3,9 +3,9 @@
 import { Fragment, useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
 
-import { getCommentStats } from "@/actions/comment";
 import ErrorPage from "@/components/ui/Error";
 import Link from "@/components/ui/Link";
+import { getCommentStats } from "@/lib/client/api/comment-read";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

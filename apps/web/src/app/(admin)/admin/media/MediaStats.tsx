@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
 
-import { getMediaStats } from "@/actions/media";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getMediaStats } from "@/lib/client/api/media-read";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

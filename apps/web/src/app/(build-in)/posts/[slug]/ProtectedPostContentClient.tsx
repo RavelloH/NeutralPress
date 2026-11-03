@@ -12,7 +12,7 @@ import {
 import { RiLock2Line, RiShieldKeyholeLine } from "@remixicon/react";
 import type { ProtectedPostContent } from "@repo/shared-types/api/post";
 
-import { getProtectedPostContent, unlockProtectedPost } from "@/actions/post";
+import { unlockProtectedPost } from "@/actions/post";
 import CommentsSection from "@/components/client/features/posts/CommentsSection";
 import PostToc from "@/components/client/features/posts/PostToc";
 import MarkdownClientRenderer from "@/components/client/renderer/MarkdownClientRenderer";
@@ -21,6 +21,7 @@ import { CaptchaButton } from "@/components/ui/CaptchaButton";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useConfig } from "@/context/ConfigContext";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getProtectedPostContent } from "@/lib/client/api/post-read";
 import { resolveApiResponse } from "@/lib/client/run-with-auth";
 import { prepareRichTextSource } from "@/lib/shared/rich-text-source";
 import type { MDXContentMessage } from "@/types/broadcast-messages";

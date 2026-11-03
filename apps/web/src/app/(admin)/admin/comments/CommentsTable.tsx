@@ -14,17 +14,14 @@ import type {
   CommentStatus,
 } from "@repo/shared-types/api/comment";
 
-import {
-  deleteComments,
-  getCommentsAdmin,
-  updateCommentStatus,
-} from "@/actions/comment";
+import { deleteComments, updateCommentStatus } from "@/actions/comment";
 import GridTable, {
   type ActionButton,
   type FilterConfig,
 } from "@/components/ui/GridTable";
 import Link from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getCommentsAdmin } from "@/lib/client/api/comment-read";
 import runWithAuth, { resolveApiResponse } from "@/lib/client/run-with-auth";
 import { Dialog } from "@/ui/Dialog";
 import type { TableColumn } from "@/ui/Table";
