@@ -10,9 +10,10 @@ import {
   RiPriceTag3Line,
   RiSearchLine,
 } from "@remixicon/react";
+import type { ApiResponse } from "@repo/shared-types/api/common";
 import Image from "next/image";
 
-import { searchSite, type SearchSiteResult } from "@/actions/search";
+import type { SearchSiteResult } from "@/actions/search";
 import HighlightedText from "@/components/client/HighlightedText";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { AutoResizer } from "@/ui/AutoResizer";
@@ -111,6 +112,7 @@ export default function SearchClient({
   const [hasSearched, setHasSearched] = useState(false);
   const [activeTab, setActiveTab] = useState<SearchTab>("posts");
   const requestIdRef = useRef(0);
+  const searchAbortRef = useRef<AbortController | null>(null);
 
   const [sessionId] = useState(() => {
     if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -154,20 +156,39 @@ export default function SearchClient({
 
   const performSearch = useCallback(
     async (query: string) => {
+      // Search is a read-only GET, not a serialized Server Function POST.
+      searchAbortRef.current?.abort();
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
       const currentRequestId = ++requestIdRef.current;
+
       setIsSearching(true);
       setHasSearched(true);
 
       try {
-        const response = await searchSite({
-          query,
-          sessionId,
-          visitorId: getVisitorId(),
+        const url = new URL("/api/public/search", window.location.origin);
+        url.searchParams.set("q", query);
+
+        const result = await fetch(url.toString(), {
+          method: "GET",
+          headers: {
+            "x-search-session-id": sessionId,
+            "x-search-visitor-id": getVisitorId(),
+          },
+          cache: "no-store",
+          signal: controller.signal,
         });
+        const response =
+          (await result.json()) as ApiResponse<SearchSiteResult | null>;
 
-        if (currentRequestId !== requestIdRef.current) return;
+        if (
+          controller.signal.aborted ||
+          currentRequestId !== requestIdRef.current
+        ) {
+          return;
+        }
 
-        if (response.success && response.data) {
+        if (result.ok && response.success && response.data) {
           const data = response.data;
           setResult(data);
           const firstAvailableTab =
@@ -181,7 +202,12 @@ export default function SearchClient({
           setActiveTab("posts");
         }
       } catch (error) {
-        if (currentRequestId !== requestIdRef.current) return;
+        if (
+          controller.signal.aborted ||
+          currentRequestId !== requestIdRef.current
+        ) {
+          return;
+        }
         console.error("全站搜索失败:", error);
         setResult({
           ...EMPTY_RESULT,
@@ -189,6 +215,9 @@ export default function SearchClient({
         });
         setActiveTab("posts");
       } finally {
+        if (searchAbortRef.current === controller) {
+          searchAbortRef.current = null;
+        }
         if (currentRequestId === requestIdRef.current) {
           setIsSearching(false);
         }
@@ -197,12 +226,16 @@ export default function SearchClient({
     [getVisitorId, sessionId],
   );
 
+  useEffect(() => () => searchAbortRef.current?.abort(), []);
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const keyword = searchQuery.trim();
 
       if (!keyword) {
         requestIdRef.current += 1;
+        searchAbortRef.current?.abort();
+        searchAbortRef.current = null;
         setIsSearching(false);
         setHasSearched(false);
         setResult(null);

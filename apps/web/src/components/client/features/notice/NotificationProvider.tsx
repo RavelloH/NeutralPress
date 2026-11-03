@@ -22,12 +22,12 @@ import type {
 } from "ably";
 
 import { getAblyTokenRequest } from "@/actions/ably";
-import { getUnreadNoticeCount } from "@/actions/notice";
 import { type MessageNotificationItem } from "@/components/client/features/notice/MessageNotificationToast";
 import { type NotificationItem } from "@/components/client/features/notice/NotificationToast";
 import UnifiedNotificationContainer from "@/components/client/features/notice/UnifiedNotificationContainer";
 import UnreadNoticeTracker from "@/components/client/features/notice/UnreadNoticeTracker";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getUnreadNoticeCount } from "@/lib/client/api/public";
 
 type AblyRealtime = Realtime;
 
