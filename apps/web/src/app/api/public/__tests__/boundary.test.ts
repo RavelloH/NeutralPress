@@ -1,5 +1,6 @@
-import { readdirSync, readFileSync } from "node:fs";
-import path from "node:path";
+// @vitest-environment node
+import { readdirSync, readFileSync } from "fs";
+import path from "path";
 import { describe, expect, it } from "vitest";
 
 const webSrc = path.resolve(process.cwd(), "src");
