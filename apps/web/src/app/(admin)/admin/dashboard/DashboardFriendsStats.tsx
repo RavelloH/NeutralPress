@@ -4,9 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
 import type { FriendLinksStats } from "@repo/shared-types/api/friendlink";
 
-import { getFriendLinksStats } from "@/actions/friendlink";
 import ErrorPage from "@/components/ui/Error";
 import Link from "@/components/ui/Link";
+import { getFriendLinksStats } from "@/lib/client/api/friendlink-read";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

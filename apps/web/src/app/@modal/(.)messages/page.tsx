@@ -4,9 +4,9 @@ import { randomUUID } from "node:crypto";
 
 import { cookies } from "next/headers";
 
-import { getConversations } from "@/actions/message";
 import MessagesModal from "@/app/@modal/(.)messages/MessagesModal";
 import { authVerify } from "@/lib/server/auth-verify";
+import { getConversations } from "@/lib/server/services/message-domain";
 
 type SearchParamsRecord = Record<string, string | string[] | undefined>;
 

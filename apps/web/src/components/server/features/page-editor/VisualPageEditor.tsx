@@ -26,7 +26,6 @@ import {
 } from "@remixicon/react";
 import { useMotionValue, useMotionValueEvent, useSpring } from "framer-motion";
 
-import { fetchBlockData } from "@/actions/page";
 import type {
   ResolvedBlock,
   RuntimeBlockInput,
@@ -38,6 +37,7 @@ import BlockLibrary from "@/components/server/features/page-editor/BlockLibrary"
 import VisualBlockRenderer, {
   SingleBlockRenderer,
 } from "@/components/server/features/page-editor/VisualBlockRenderer";
+import { fetchBlockData } from "@/lib/client/api/page-read";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";

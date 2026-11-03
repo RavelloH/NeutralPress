@@ -15,13 +15,13 @@ import type {
 import {
   checkFriendLinks,
   deleteFriendLinkByAdmin,
-  getFriendLinksList,
 } from "@/actions/friendlink";
 import FriendLinkEditDialog from "@/app/(admin)/admin/friends/FriendLinkEditDialog";
 import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import Link from "@/components/ui/Link";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getFriendLinksList } from "@/lib/client/api/friendlink-read";
 import { formatDateTimeLocale } from "@/lib/shared/date-format";
 import { AlertDialog } from "@/ui/AlertDialog";
 import type { TableColumn } from "@/ui/Table";

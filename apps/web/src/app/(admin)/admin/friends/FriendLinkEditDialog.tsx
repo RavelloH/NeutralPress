@@ -8,15 +8,13 @@ import type {
   FriendLinkStatus,
 } from "@repo/shared-types/api/friendlink";
 
-import {
-  getFriendLinkDetail,
-  updateFriendLinkByAdmin,
-} from "@/actions/friendlink";
+import { updateFriendLinkByAdmin } from "@/actions/friendlink";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
 } from "@/components/client/charts/AreaChart";
 import Link from "@/components/ui/Link";
+import { getFriendLinkDetail } from "@/lib/client/api/friendlink-read";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";

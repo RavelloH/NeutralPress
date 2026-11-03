@@ -3,9 +3,12 @@ import type { Conversation, Message } from "@repo/shared-types/api/message";
 import { usePathname, useSearchParams } from "next/navigation";
 import useSWR from "swr";
 
-import { getConversationMessages, getConversations } from "@/actions/message";
 import type { ConnectionStatus } from "@/components/client/features/notice/NotificationProvider";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import {
+  getConversationMessages,
+  getConversations,
+} from "@/lib/client/api/message-read";
 
 interface UseMessagePollingOptions {
   enabled: boolean;

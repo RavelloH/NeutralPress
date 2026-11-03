@@ -11,17 +11,13 @@ import {
 } from "@remixicon/react";
 import type { UserListItem } from "@repo/shared-types/api/user";
 
-import {
-  deleteUsers,
-  disable2FA,
-  getUsersList,
-  updateUsers,
-} from "@/actions/user";
+import { deleteUsers, disable2FA, updateUsers } from "@/actions/user";
 import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import Link from "@/components/ui/Link";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getUsersList } from "@/lib/client/api/user-read";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";
 import { Checkbox } from "@/ui/Checkbox";

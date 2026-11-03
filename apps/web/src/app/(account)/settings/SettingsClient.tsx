@@ -10,7 +10,6 @@ import {
 } from "@remixicon/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { getUserProfile } from "@/actions/user";
 import {
   BasicInfoDialogs,
   type BasicInfoDialogsRef,
@@ -39,6 +38,7 @@ import {
 } from "@/app/(account)/settings/use-reauth";
 import UnauthorizedPage from "@/app/unauthorized";
 import { useMobile } from "@/hooks/use-mobile";
+import { getUserProfile } from "@/lib/client/api/user-read";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

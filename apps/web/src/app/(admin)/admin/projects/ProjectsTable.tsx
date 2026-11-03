@@ -18,7 +18,6 @@ import type { ProjectListItem } from "@repo/shared-types/api/project";
 
 import {
   deleteProjects,
-  getProjectsList,
   syncProjectsGithub,
   updateProject,
   updateProjects,
@@ -32,6 +31,7 @@ import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import Link, { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getProjectsList } from "@/lib/client/api/project-read";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";

@@ -5,10 +5,10 @@ import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
-import { getUserPublicProfile } from "@/actions/user";
 import UserProfileModal from "@/app/@modal/(.)user/[uid]/UserProfileModal";
 import ViewCountBatchLoader from "@/components/client/logic/ViewCountBatchLoader";
 import { type AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
+import { getUserPublicProfile } from "@/lib/server/services/user-domain";
 
 interface UserProfileModalPageProps {
   params: Promise<{ uid: string }>;

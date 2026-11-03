@@ -7,12 +7,12 @@ import type { FriendLinksStats } from "@repo/shared-types/api/friendlink";
 import {
   checkFriendLinks,
   createFriendLinkByAdmin,
-  getFriendLinksStats,
   parseFriendLinkByAdmin,
 } from "@/actions/friendlink";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getFriendLinksStats } from "@/lib/client/api/friendlink-read";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";

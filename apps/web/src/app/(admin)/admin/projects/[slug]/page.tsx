@@ -1,12 +1,12 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
-import { getProjectDetail } from "@/actions/project";
 import { ProjectEditorWrapper } from "@/components/client/features/editor/ProjectEditorWrapper";
 import AdminSidebar from "@/components/client/layout/AdminSidebar";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
 import { generateMetadata as generateSeoMetadata } from "@/lib/server/seo";
+import { getProjectDetail } from "@/lib/server/services/project-domain";
 
 type Props = {
   params: Promise<{ slug: string }>;

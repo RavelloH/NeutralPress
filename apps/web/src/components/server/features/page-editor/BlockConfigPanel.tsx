@@ -8,7 +8,6 @@ import {
 } from "@remixicon/react";
 import { codeToHtml } from "shiki";
 
-import { getAllPlaceholders } from "@/actions/page";
 import type { ResolvedBlock } from "@/blocks/core/definition";
 import { getBlockFormConfig } from "@/blocks/core/registry";
 import type {
@@ -21,6 +20,7 @@ import MediaSelector from "@/components/client/features/media/MediaSelector";
 import Link from "@/components/ui/Link";
 import { useConfig } from "@/context/ConfigContext";
 import type { ConfigType } from "@/data/default-configs";
+import { getAllPlaceholders } from "@/lib/client/api/page-read";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";

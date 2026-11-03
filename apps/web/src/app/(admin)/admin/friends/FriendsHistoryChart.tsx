@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FriendLinkTrendItem } from "@repo/shared-types/api/friendlink";
 
-import { getFriendLinksTrends } from "@/actions/friendlink";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
@@ -11,6 +10,7 @@ import AreaChart, {
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getFriendLinksTrends } from "@/lib/client/api/friendlink-read";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 

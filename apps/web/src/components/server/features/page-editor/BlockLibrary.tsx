@@ -7,7 +7,6 @@ import {
   RiQuestionLine,
 } from "@remixicon/react";
 
-import { fetchBlockData } from "@/actions/page";
 import type {
   ResolvedBlock,
   RuntimeBlockInput,
@@ -16,6 +15,7 @@ import { getAllBlockFormConfigs } from "@/blocks/core/registry";
 import type { BlockFormConfig } from "@/blocks/core/types/field-config";
 import { SingleBlockRenderer } from "@/components/server/features/page-editor/VisualBlockRenderer";
 import Link from "@/components/ui/Link";
+import { fetchBlockData } from "@/lib/client/api/page-read";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";

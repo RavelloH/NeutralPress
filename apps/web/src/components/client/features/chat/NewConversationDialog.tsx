@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { RiSearchLine, RiUserSearchLine } from "@remixicon/react";
 import type { UserSearchResult } from "@repo/shared-types/api/message";
 
-import { searchUsers } from "@/actions/message";
 import UserSearchItem from "@/components/client/features/chat/UserSearchItem";
+import { searchUsers } from "@/lib/client/api/message-read";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Dialog } from "@/ui/Dialog";

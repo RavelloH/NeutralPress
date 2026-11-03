@@ -11,16 +11,12 @@ import {
 } from "@remixicon/react";
 import type { PageListItem } from "@repo/shared-types/api/page";
 
-import {
-  deletePages,
-  getPagesList,
-  updatePage,
-  updatePages,
-} from "@/actions/page";
+import { deletePages, updatePage, updatePages } from "@/actions/page";
 import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getPagesList } from "@/lib/client/api/page-read";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { isDateString } from "@/lib/shared/date-format";
 import { getPageEditorPathByContentType } from "@/lib/shared/page-editor-route";

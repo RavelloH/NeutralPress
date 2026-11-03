@@ -5,8 +5,8 @@ import { useInView } from "react-intersection-observer";
 import { RiLockLine, RiTimeLine } from "@remixicon/react";
 import type { UserActivityItem } from "@repo/shared-types/api/user";
 
-import { getUserActivity } from "@/actions/user";
 import ActivityCard from "@/components/client/features/user/ActivityCard";
+import { getUserActivity } from "@/lib/client/api/user-read";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

@@ -11,7 +11,6 @@ import type {
 
 import {
   deleteOwnFriendLink,
-  getOwnFriendLink,
   submitFriendLinkApplication,
   updateOwnFriendLink,
 } from "@/actions/friendlink";
@@ -26,6 +25,7 @@ import AreaChart, {
 import { CaptchaButton } from "@/components/ui/CaptchaButton";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getOwnFriendLink } from "@/lib/client/api/friendlink-read";
 import { formatDateTimeLocale } from "@/lib/shared/date-format";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoResizer } from "@/ui/AutoResizer";

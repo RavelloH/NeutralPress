@@ -4,11 +4,11 @@ import { RiQuestionAnswerLine } from "@remixicon/react";
 import { cookies } from "next/headers";
 import Link from "next/link";
 
-import { getConversations } from "@/actions/message";
 import MessagesClient from "@/components/client/features/chat/MessagesClient";
 import ErrorPage from "@/components/ui/Error";
 import { authVerify } from "@/lib/server/auth-verify";
 import { generateMetadata } from "@/lib/server/seo";
+import { getConversations } from "@/lib/server/services/message-domain";
 
 export const metadata = await generateMetadata(
   {
