@@ -567,7 +567,7 @@ describe("cloud actions", () => {
   describe("updateCloudConfig 补充测试 3", () => {
     it("数据库错误时返回失败", async () => {
       setupSuccessMocks();
-      vi.mocked(prisma.config.upsert).mockRejectedValue(new Error("DB error"));
+      vi.mocked(prisma.$transaction).mockRejectedValue(new Error("DB error"));
 
       const { updateCloudConfig } = await import("@/actions/cloud");
       const result = await updateCloudConfig({

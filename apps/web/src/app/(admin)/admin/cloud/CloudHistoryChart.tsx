@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CloudTrendItem } from "@repo/shared-types/api/cloud";
 
-import { getCloudTrends } from "@/actions/cloud";
 import StackedBarChart, {
   type SeriesConfig,
   type StackedBarChartDataPoint,
@@ -12,6 +11,7 @@ import { GridItem } from "@/components/client/layout/RowGrid";
 import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getCloudTrends } from "@/lib/client/api/cloud-read";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";
 import { AutoTransition } from "@/ui/AutoTransition";

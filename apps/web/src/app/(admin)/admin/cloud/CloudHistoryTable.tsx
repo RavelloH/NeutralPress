@@ -8,10 +8,10 @@ import {
 } from "@repo/shared-types/api/cloud";
 import { codeToHtml } from "shiki";
 
-import { getCloudHistory } from "@/actions/cloud";
 import type { FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getCloudHistory } from "@/lib/client/api/cloud-read";
 import { formatDateTimeWithSeconds } from "@/lib/shared/date-format";
 import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
