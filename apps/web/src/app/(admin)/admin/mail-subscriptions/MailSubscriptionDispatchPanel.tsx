@@ -10,8 +10,6 @@ import {
 import {
   cleanupInvalidMailSubscriptions,
   dispatchLatestPostMail,
-  getLatestMailDispatchOverview,
-  getMailSubscriptionStatusDistribution,
 } from "@/actions/mail-subscription";
 import {
   MAIL_SUBSCRIPTIONS_REFRESH_EVENT,
@@ -24,6 +22,10 @@ import { GridItem } from "@/components/client/layout/RowGrid";
 import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import {
+  getLatestMailDispatchOverview,
+  getMailSubscriptionStatusDistribution,
+} from "@/lib/client/api/mail-subscription-read";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";
 import { AlertDialog } from "@/ui/AlertDialog";

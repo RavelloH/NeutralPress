@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { getLatestMailDispatchOverview } from "@/actions/mail-subscription";
 import { createPost, updatePost } from "@/actions/post";
 import { CategoryInput } from "@/components/client/features/categories/CategoryInput";
 import { EditorCore } from "@/components/client/features/editor/EditorCore";
@@ -18,6 +17,7 @@ import PostLicensePicker from "@/components/client/features/posts/PostLicensePic
 import type { SelectedTag } from "@/components/client/features/tags/TagInput";
 import { TagInput } from "@/components/client/features/tags/TagInput";
 import { useNavigateWithTransition } from "@/components/ui/Link";
+import { getLatestMailDispatchOverview } from "@/lib/client/api/mail-subscription-read";
 import {
   clearEditorContent,
   flushEditorContentSave,

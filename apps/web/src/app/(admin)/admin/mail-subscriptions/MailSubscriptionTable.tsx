@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { RiCheckLine, RiCloseLine, RiRefreshLine } from "@remixicon/react";
 
 import {
-  getMailSubscriptionList,
   resetMailSubscriptionLastSentByAdmin,
   updateMailSubscriptionStatusByAdmin,
 } from "@/actions/mail-subscription";
@@ -16,6 +15,7 @@ import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import Link from "@/components/ui/Link";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getMailSubscriptionList } from "@/lib/client/api/mail-subscription-read";
 import { AlertDialog } from "@/ui/AlertDialog";
 import type { TableColumn } from "@/ui/Table";
 import { useToast } from "@/ui/Toast";
