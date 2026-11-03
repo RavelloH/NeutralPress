@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 
-import { trackPageView } from "@/actions/analytics";
+import { trackPageView } from "@/lib/client/api/analytics-read";
 
 const VISITOR_ID_KEY = "visitor_id";
 const CACHE_KEY = "viewcount_cache";
@@ -188,7 +188,7 @@ export function AnalyticsTracker() {
     // 先立即更新本地缓存（用户立即看到访问量增加）
     incrementViewCountCache(pathname);
 
-    // 然后调用 server action 追踪访问（后台记录）
+    // 使用独立 JSON POST 追踪访问，不阻塞其它客户端 Action 请求
     trackPageView({
       path: pathname,
       referer,

@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ============ Mocks ============
@@ -617,7 +618,6 @@ describe("analytics actions", () => {
         await getPageViews({
           access_token: "token",
           page: 1,
-          pageSize: 10,
           sortBy: "timestamp",
           sortOrder: "desc",
         } as any);

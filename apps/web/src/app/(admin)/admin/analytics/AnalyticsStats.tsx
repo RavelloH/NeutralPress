@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AnalyticsStatsData, GetAnalyticsStats } from "@repo/shared-types";
 
-import { getAnalyticsStats } from "@/actions/analytics";
 import AnalyticsOverview from "@/app/(admin)/admin/analytics/AnalyticsOverview";
 import AnalyticsTrendChart from "@/app/(admin)/admin/analytics/AnalyticsTrendChart";
 import DimensionStats from "@/app/(admin)/admin/analytics/DimensionStats";
@@ -18,6 +17,7 @@ import type { TimeRangeValue } from "@/app/(admin)/admin/analytics/TimeRangeSele
 import PathTrendChart from "@/app/(admin)/admin/analytics/VisitTrendChart";
 import RowGrid from "@/components/client/layout/RowGrid";
 import { useMainColor } from "@/components/client/layout/ThemeProvider";
+import { getAnalyticsStats } from "@/lib/client/api/analytics-read";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";
 

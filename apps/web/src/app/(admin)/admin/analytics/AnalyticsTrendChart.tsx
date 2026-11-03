@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { getRealTimeStats } from "@/actions/analytics";
 import type { AnalyticsTableQuery } from "@/app/(admin)/admin/analytics/PageViewTable";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
 } from "@/components/client/charts/AreaChart";
 import { GridItem } from "@/components/client/layout/RowGrid";
+import { getRealTimeStats } from "@/lib/client/api/analytics-read";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 

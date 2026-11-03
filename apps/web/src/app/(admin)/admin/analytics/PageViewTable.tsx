@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { RiEyeLine } from "@remixicon/react";
 import type { PageViewItem } from "@repo/shared-types";
 
-import { getPageViews } from "@/actions/analytics";
 import type { FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
+import { getPageViews } from "@/lib/client/api/analytics-read";
 import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import type { TableColumn } from "@/ui/Table";
@@ -555,15 +555,10 @@ export default function PageViewTable({
 
         const result = await getPageViews(params);
 
-        // @ts-expect-error - Server action returns ApiResponse in server action mode
         if (result.success && result.data) {
-          // @ts-expect-error - Server action returns ApiResponse in server action mode
           setData(result.data);
-          // @ts-expect-error - Server action returns ApiResponse in server action mode
           setTotalRecords(result.meta?.total || 0);
-          // @ts-expect-error - Server action returns ApiResponse in server action mode
           if (result.meta) {
-            // @ts-expect-error - Server action returns ApiResponse in server action mode
             setTotalPages(result.meta.totalPages);
           }
         }

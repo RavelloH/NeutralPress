@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import { batchGetViewCounts } from "@/actions/analytics";
+import { batchGetViewCounts } from "@/lib/client/api/analytics-read";
 
 /**
  * localStorage 缓存的 key
