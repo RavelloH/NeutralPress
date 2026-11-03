@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { RiAddLine, RiRefreshLine } from "@remixicon/react";
 
-import { getMenusStats } from "@/actions/menu";
 import { createMenu } from "@/actions/menu";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { getMenusStats } from "@/lib/client/api/menu-read";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";

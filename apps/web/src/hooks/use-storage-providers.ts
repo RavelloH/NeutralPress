@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { getStorageList } from "@/actions/storage";
+import { getStorageList } from "@/lib/client/api/storage-read";
 
 export interface StorageProvider {
   id: string;
@@ -47,7 +47,7 @@ export function useStorageProviders(
     setLoading(true);
 
     getStorageList({
-      access_token: "", // Server Action 会从 cookie 自动获取
+      access_token: "", // GET 适配层不会将 token 加入 URL，由 Cookie 完成身份验证
       page: 1,
       pageSize: 100,
       sortBy: "createdAt",

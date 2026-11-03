@@ -9,10 +9,10 @@ import {
 } from "@remixicon/react";
 import type { DoctorHistoryItem } from "@repo/shared-types/api/doctor";
 
-import { getDoctorHistory } from "@/actions/doctor";
 import type { FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getDoctorHistory } from "@/lib/client/api/doctor-read";
 import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import type { TableColumn } from "@/ui/Table";

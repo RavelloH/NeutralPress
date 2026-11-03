@@ -15,8 +15,6 @@ import type { StorageListItem } from "@repo/shared-types/api/storage";
 
 import {
   deleteStorage,
-  getStorageDetail,
-  getStorageList,
   setDefaultStorage,
   toggleStorageStatus,
   updateStorage,
@@ -30,6 +28,10 @@ import {
 import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import {
+  getStorageDetail,
+  getStorageList,
+} from "@/lib/client/api/storage-read";
 import runWithAuth, { resolveApiResponse } from "@/lib/client/run-with-auth";
 import type { StorageProviderType } from "@/template/storages";
 import { AlertDialog } from "@/ui/AlertDialog";

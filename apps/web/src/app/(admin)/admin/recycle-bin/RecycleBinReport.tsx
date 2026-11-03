@@ -10,12 +10,12 @@ import type { RecycleBinStatsData } from "@repo/shared-types/api/recycle-bin";
 
 import {
   clearRecycleBin,
-  getRecycleBinStats,
   restoreAllProjectsFromRecycleBin,
 } from "@/actions/recycle-bin";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getRecycleBinStats } from "@/lib/client/api/recycle-bin-read";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";

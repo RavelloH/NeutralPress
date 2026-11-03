@@ -7,13 +7,14 @@ import type {
   DoctorHistoryItem,
 } from "@repo/shared-types/api/doctor";
 
-import { doctor, getDoctorHistory } from "@/actions/doctor";
+import { doctor } from "@/actions/doctor";
 import AreaChart, {
   type AreaChartDataPoint,
 } from "@/components/client/charts/AreaChart";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { getDoctorHistory } from "@/lib/client/api/doctor-read";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";

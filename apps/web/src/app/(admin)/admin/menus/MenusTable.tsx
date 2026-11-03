@@ -10,15 +10,11 @@ import {
 } from "@remixicon/react";
 import type { MenuListItem } from "@repo/shared-types/api/menu";
 
-import {
-  deleteMenus,
-  getMenusList,
-  updateMenu,
-  updateMenus,
-} from "@/actions/menu";
+import { deleteMenus, updateMenu, updateMenus } from "@/actions/menu";
 import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getMenusList } from "@/lib/client/api/menu-read";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";

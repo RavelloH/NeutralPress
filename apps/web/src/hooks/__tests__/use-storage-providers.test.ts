@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useStorageProviders } from "@/hooks/use-storage-providers";
 
-// Mock the server action
-vi.mock("@/actions/storage", () => ({
+// Mock the GET client adapter
+vi.mock("@/lib/client/api/storage-read", () => ({
   getStorageList: vi.fn(),
 }));
 
-import { getStorageList } from "@/actions/storage";
+import { getStorageList } from "@/lib/client/api/storage-read";
 
 const mockGetStorageList = vi.mocked(getStorageList);
 

@@ -8,13 +8,13 @@ import type {
 } from "@repo/shared-types/api/recycle-bin";
 
 import {
-  getRecycleBinList,
   purgeRecycleBinItems,
   restoreRecycleBinItems,
 } from "@/actions/recycle-bin";
 import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getRecycleBinList } from "@/lib/client/api/recycle-bin-read";
 import { AlertDialog } from "@/ui/AlertDialog";
 import type { TableColumn } from "@/ui/Table";
 import { useToast } from "@/ui/Toast";
