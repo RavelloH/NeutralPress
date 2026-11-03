@@ -8,15 +8,11 @@ import {
 } from "@remixicon/react";
 import type { CronConfig, CronHistoryItem } from "@repo/shared-types/api/cron";
 
-import {
-  getCronConfig,
-  getCronHistory,
-  triggerCron,
-  updateCronConfig,
-} from "@/actions/cron";
+import { getCronConfig, triggerCron, updateCronConfig } from "@/actions/cron";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getCronHistory } from "@/lib/client/api/cron-history";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";

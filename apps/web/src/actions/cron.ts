@@ -18,8 +18,6 @@ import type {
 } from "@repo/shared-types/api/cron";
 import {
   GetCronConfigSchema,
-  GetCronHistorySchema,
-  GetCronTrendsSchema,
   TriggerCronSchema,
   UpdateCronConfigSchema,
 } from "@repo/shared-types/api/cron";
@@ -41,6 +39,10 @@ import {
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
+import {
+  getCronHistory as getCronHistoryService,
+  getCronTrends as getCronTrendsService,
+} from "@/lib/server/services/cron-history";
 import { cleanupStorageTempFolders } from "@/lib/server/storage-temp-cleanup";
 import { validateData } from "@/lib/server/validator";
 
@@ -895,6 +897,7 @@ export async function triggerCron(
   }
 }
 
+// Backward-compatible Server Actions delegate to the common server-only service.
 export async function getCronHistory(
   params: GetCronHistory,
   serverConfig: { environment: "serverless" },
@@ -904,165 +907,10 @@ export async function getCronHistory(
   serverConfig?: ActionConfig,
 ): Promise<ApiResponse<CronHistoryItem[] | null>>;
 export async function getCronHistory(
-  {
-    access_token,
-    page = 1,
-    pageSize = 25,
-    sortBy,
-    sortOrder,
-    id,
-    status,
-    triggerType,
-    createdAtStart,
-    createdAtEnd,
-  }: GetCronHistory,
+  params: GetCronHistory,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<CronHistoryItem[] | null>> {
-  const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction",
-  );
-
-  if (!(await limitControl(await headers(), "getCronHistory"))) {
-    return response.tooManyRequests();
-  }
-
-  const validationError = validateData(
-    {
-      access_token,
-      page,
-      pageSize,
-      sortBy,
-      sortOrder,
-      id,
-      status,
-      triggerType,
-      createdAtStart,
-      createdAtEnd,
-    },
-    GetCronHistorySchema,
-  );
-  if (validationError) return response.badRequest(validationError);
-
-  const user = await authVerify({
-    allowedRoles: ["ADMIN"],
-    accessToken: access_token,
-  });
-  if (!user) {
-    return response.unauthorized();
-  }
-
-  try {
-    const skip = (page - 1) * pageSize;
-    const where: {
-      id?: number;
-      status?: CronRunStatus;
-      triggerType?: "MANUAL" | "CLOUD" | "AUTO";
-      createdAt?: {
-        gte?: Date;
-        lte?: Date;
-      };
-    } = {};
-
-    if (id !== undefined) where.id = id;
-    if (status) where.status = status;
-    if (triggerType) where.triggerType = triggerType;
-    if (createdAtStart || createdAtEnd) {
-      where.createdAt = {};
-      if (createdAtStart) {
-        where.createdAt.gte = new Date(createdAtStart);
-      }
-      if (createdAtEnd) {
-        where.createdAt.lte = new Date(createdAtEnd);
-      }
-    }
-
-    let orderBy:
-      | { id: "asc" | "desc" }
-      | { createdAt: "asc" | "desc" }
-      | { startedAt: "asc" | "desc" }
-      | { status: "asc" | "desc" }
-      | { triggerType: "asc" | "desc" }
-      | { durationMs: "asc" | "desc" }
-      | { enabledCount: "asc" | "desc" }
-      | { successCount: "asc" | "desc" }
-      | { failedCount: "asc" | "desc" }
-      | { skippedCount: "asc" | "desc" } = { createdAt: "desc" };
-
-    if (sortBy && sortOrder) {
-      switch (sortBy) {
-        case "id":
-          orderBy = { id: sortOrder };
-          break;
-        case "createdAt":
-          orderBy = { createdAt: sortOrder };
-          break;
-        case "startedAt":
-          orderBy = { startedAt: sortOrder };
-          break;
-        case "status":
-          orderBy = { status: sortOrder };
-          break;
-        case "triggerType":
-          orderBy = { triggerType: sortOrder };
-          break;
-        case "durationMs":
-          orderBy = { durationMs: sortOrder };
-          break;
-        case "enabledCount":
-          orderBy = { enabledCount: sortOrder };
-          break;
-        case "successCount":
-          orderBy = { successCount: sortOrder };
-          break;
-        case "failedCount":
-          orderBy = { failedCount: sortOrder };
-          break;
-        case "skippedCount":
-          orderBy = { skippedCount: sortOrder };
-          break;
-      }
-    }
-
-    const [total, records] = await Promise.all([
-      prisma.cronHistory.count({ where }),
-      prisma.cronHistory.findMany({
-        skip,
-        take: pageSize,
-        where,
-        orderBy,
-        select: {
-          id: true,
-          startedAt: true,
-          createdAt: true,
-          durationMs: true,
-          triggerType: true,
-          status: true,
-          totalCount: true,
-          enabledCount: true,
-          successCount: true,
-          failedCount: true,
-          skippedCount: true,
-          snapshot: true,
-        },
-      }),
-    ]);
-
-    const data = records.map((record) => toCronHistoryItem(record));
-    const totalPages = Math.ceil(total / pageSize);
-    const meta = {
-      page,
-      pageSize,
-      total,
-      totalPages,
-      hasNext: totalPages > 0 && page < totalPages,
-      hasPrev: totalPages > 0 && page > 1,
-    };
-
-    return response.ok({ data, meta });
-  } catch (error) {
-    console.error("Get cron history error:", error);
-    return response.serverError();
-  }
+  return getCronHistoryService(params, serverConfig);
 }
 
 export async function getCronTrends(
@@ -1074,110 +922,10 @@ export async function getCronTrends(
   serverConfig?: ActionConfig,
 ): Promise<ApiResponse<CronTrendItem[] | null>>;
 export async function getCronTrends(
-  { access_token, days = 30, count = 30 }: GetCronTrends,
+  params: GetCronTrends,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<CronTrendItem[] | null>> {
-  const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction",
-  );
-
-  if (!(await limitControl(await headers(), "getCronTrends"))) {
-    return response.tooManyRequests();
-  }
-
-  const validationError = validateData(
-    {
-      access_token,
-      days,
-      count,
-    },
-    GetCronTrendsSchema,
-  );
-  if (validationError) return response.badRequest(validationError);
-
-  const user = await authVerify({
-    allowedRoles: ["ADMIN"],
-    accessToken: access_token,
-  });
-  if (!user) {
-    return response.unauthorized();
-  }
-
-  try {
-    const daysAgo = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-
-    const [recentByTime, recentByCount] = await Promise.all([
-      prisma.cronHistory.findMany({
-        where: {
-          createdAt: {
-            gte: daysAgo,
-          },
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-        select: {
-          id: true,
-          createdAt: true,
-          durationMs: true,
-          successCount: true,
-          failedCount: true,
-          skippedCount: true,
-          snapshot: true,
-        },
-      }),
-      prisma.cronHistory.findMany({
-        take: count,
-        orderBy: {
-          createdAt: "desc",
-        },
-        select: {
-          id: true,
-          createdAt: true,
-          durationMs: true,
-          successCount: true,
-          failedCount: true,
-          skippedCount: true,
-          snapshot: true,
-        },
-      }),
-    ]);
-
-    const mergedMap = new Map<number, (typeof recentByTime)[0]>();
-    for (const record of recentByTime) {
-      mergedMap.set(record.id, record);
-    }
-    for (const record of recentByCount) {
-      mergedMap.set(record.id, record);
-    }
-
-    const merged = Array.from(mergedMap.values()).sort(
-      (left, right) => left.createdAt.getTime() - right.createdAt.getTime(),
-    );
-
-    const data: CronTrendItem[] = merged.map((record) => {
-      const snapshot = normalizeCronSnapshot(record.snapshot);
-      return {
-        time: record.createdAt.toISOString(),
-        data: {
-          totalDurationMs: record.durationMs,
-          doctorDurationMs: snapshot.tasks.doctor.d,
-          projectsDurationMs: snapshot.tasks.projects.d,
-          friendsDurationMs: snapshot.tasks.friends.d,
-          cleanupDurationMs: snapshot.tasks.cleanup.d,
-          analyticsDurationMs: snapshot.tasks.analytics.d,
-          successCount: record.successCount,
-          failedCount: record.failedCount,
-          skippedCount: record.skippedCount,
-        },
-      };
-    });
-
-    return response.ok({ data });
-  } catch (error) {
-    console.error("Get cron trends error:", error);
-    return response.serverError();
-  }
+  return getCronTrendsService(params, serverConfig);
 }
 
 export async function getCronConfig(

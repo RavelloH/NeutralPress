@@ -9,10 +9,10 @@ import {
 } from "@remixicon/react";
 import type { CronHistoryItem } from "@repo/shared-types/api/cron";
 
-import { getCronHistory } from "@/actions/cron";
 import type { FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getCronHistory } from "@/lib/client/api/cron-history";
 import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import type { TableColumn } from "@/ui/Table";

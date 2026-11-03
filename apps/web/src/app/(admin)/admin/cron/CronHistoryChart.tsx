@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CronTrendItem } from "@repo/shared-types/api/cron";
 
-import { getCronTrends } from "@/actions/cron";
 import BarChart, {
   type BarChartDataPoint,
   type SeriesConfig,
@@ -12,6 +11,7 @@ import { GridItem } from "@/components/client/layout/RowGrid";
 import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getCronTrends } from "@/lib/client/api/cron-history";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";
 import { AutoTransition } from "@/ui/AutoTransition";

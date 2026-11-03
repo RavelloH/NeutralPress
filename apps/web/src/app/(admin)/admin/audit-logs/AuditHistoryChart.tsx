@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AuditTrendItem } from "@repo/shared-types/api/audit";
 
-import { getAuditTrends } from "@/actions/audit";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig as AreaSeriesConfig,
@@ -16,6 +15,7 @@ import { GridItem } from "@/components/client/layout/RowGrid";
 import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getAuditTrends } from "@/lib/client/api/audit";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";
 import { AutoTransition } from "@/ui/AutoTransition";

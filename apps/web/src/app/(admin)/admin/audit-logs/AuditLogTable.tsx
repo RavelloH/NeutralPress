@@ -5,10 +5,10 @@ import { RiEyeLine } from "@remixicon/react";
 import type { AuditLogItem } from "@repo/shared-types/api/audit";
 import { codeToHtml } from "shiki";
 
-import { getAuditLogs } from "@/actions/audit";
 import type { FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getAuditLogs } from "@/lib/client/api/audit";
 import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import type { TableColumn } from "@/ui/Table";
