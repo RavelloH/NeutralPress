@@ -44,3 +44,24 @@
 
 - Next.js 16 `cacheComponents: true` 不会自动保证整个 HTML 静态可缓存；不要只把 `cacheComponents` 改为 `false` 而未迁移 `use cache` 体系。
 - 开发机 `E:/NeutralPress` 与 Texas VPS 生产部署隔离。本分支在通过本地检查和验收前不直接推送/部署，也不复制线上环境变量到仓库。
+
+## Phase 1 进展：server-only 服务层与后台统计 GET（2026-11-03）
+
+上一节 Phase 0 中提及的「Route Handler 复用 Action」已由以下实现取代。**新的 /api/public/\* Route Handler 不再导入 actions 模块**；旧 Action 暂时保留为兼容适配。
+
+| 路由                                                        | 业务层                                                     | 权限/缓存                                         | 客户端                                     |
+| ----------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------ |
+| `GET /api/public/search?q=...`                              | `lib/server/services/search.ts`（全站搜索 + 文章全文搜索） | 匿名、原有限流、`private, no-store`               | SearchClient.tsx；GET + AbortController    |
+| `GET /api/public/notifications/unread`                      | `lib/server/services/notice.ts`                            | 登录、角色校验、原有限流、`private, no-store`     | NotificationProvider + UnreadNoticeTracker |
+| `GET /api/public/admin/search/index-stats?force=true`       | `lib/server/services/search-stats.ts`                      | ADMIN/EDITOR；原有权限及限流；`private, no-store` | 后台搜索索引、词云、仪表盘                 |
+| `GET /api/public/admin/search/log-stats?days=30&force=true` | `lib/server/services/search-stats.ts`                      | ADMIN/EDITOR；天数限制 1–365；`private, no-store` | 搜索趋势、性能、搜索分析与仪表盘           |
+
+- 服务层以 `import "server-only"` 明确仅在 Node.js 服务端运行，不能导入 `@/actions/*`。后续新增 API 仍按同一原则实现。
+- 搜索参数与结果定义已移至 `lib/shared/search-site.ts`；用于 tsquery 语义安全的转义逻辑在 `lib/server/search-token.ts`，不再由 Action 独占。
+- `actions/search.ts` 的 `searchPosts`、`searchSite`、`getSearchIndexStats`、`getSearchLogStats`，以及 `actions/notice.ts` 的 `getUnreadNoticeCount`，现为兼容包装，业务查询/授权实现只有一份。
+- 8 个后台统计组件已改为浏览器原生 GET，词云页面中的 `Promise.all` 不再同时调用两个客户端 Server Functions；旧 Action 调用者仍然可用。
+- 客户端统计 API 使用 `credentials: same-origin`、`cache: no-store`。即使属于 `/api/public/admin` 命名空间，也**不得在 CDN 进行共享缓存**。`force=true` 是在通过管理员/编辑认证后重新生成统计缓存，不授予任何写入业务数据的权限。
+- 统计与全站搜索的旧业务函数包含统计缓存写入或检索遥测；GET 只读语义指业务状态，不保证无观测性副作用。后续可解耦异步搜索日志和更细粒度的流控。
+- 已完成的验证：新增 4 个 Route Handler 的参数/鉴权状态测试与原搜索、通知 Action 兼容测试共 **89/89 通过**；`next typegen` 和 `tsc --noEmit` 通过；改动服务层及后台组件的 ESLint 问题已修复。
+- 新增依赖边界测试 `src/app/api/public/__tests__/boundary.test.ts`，检查公开路由、客户端封装、服务层不引入 `actions`；远程执行曾被安全检查阻断，**本测试尚未标记为通过**，下轮需专门验证。
+- 这是本地功能分支上的开发，不修改正式 VPS、DNS、Cloudflare 缓存规则。**整页 ISR / PPR 切换尚未实施**，应在 API 层充分验证后单独推进。

@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import type { NextResponse } from "next/server";
 
-import { searchSite } from "@/actions/search";
 import ResponseBuilder from "@/lib/server/response";
+import { searchSite } from "@/lib/server/services/search";
 
 /**
  * Public-facing read API. "public" denotes the external API surface,

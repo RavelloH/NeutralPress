@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
-import { getUnreadNoticeCount } from "@/actions/notice";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { getUnreadNoticeCount } from "@/lib/client/api/public";
 
 interface BroadcastMessage {
   type: "check_intent" | "check_started" | "check_completed";

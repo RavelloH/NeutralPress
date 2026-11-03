@@ -1,4 +1,4 @@
-import { getUnreadNoticeCount } from "@/actions/notice";
+import { getUnreadNoticeCount } from "@/lib/server/services/notice";
 
 /**
  * Client-facing but authenticated API. The server action's existing

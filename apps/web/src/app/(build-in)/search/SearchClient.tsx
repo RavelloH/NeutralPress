@@ -13,9 +13,9 @@ import {
 import type { ApiResponse } from "@repo/shared-types/api/common";
 import Image from "next/image";
 
-import type { SearchSiteResult } from "@/actions/search";
 import HighlightedText from "@/components/client/HighlightedText";
 import { useNavigateWithTransition } from "@/components/ui/Link";
+import type { SearchSiteResult } from "@/lib/shared/search-site";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Input } from "@/ui/Input";

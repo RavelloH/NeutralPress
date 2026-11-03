@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { searchSite } from "@/actions/search";
 import { GET } from "@/app/api/public/search/route";
+import { searchSite } from "@/lib/server/services/search";
 
-vi.mock("@/actions/search", () => ({
+vi.mock("@/lib/server/services/search", () => ({
   searchSite: vi.fn(),
 }));
 

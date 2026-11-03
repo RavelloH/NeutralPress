@@ -6,10 +6,13 @@ import type {
   SearchLogStatsResult,
 } from "@repo/shared-types/api/search";
 
-import { getSearchIndexStats, getSearchLogStats } from "@/actions/search";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import {
+  getSearchIndexStats,
+  getSearchLogStats,
+} from "@/lib/client/api/search-stats";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { Tooltip } from "@/ui/Tooltip";

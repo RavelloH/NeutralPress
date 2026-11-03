@@ -4,10 +4,10 @@ import React, { useCallback, useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
 import type { SearchIndexStatsResult } from "@repo/shared-types/api/search";
 
-import { getSearchIndexStats } from "@/actions/search";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getSearchIndexStats } from "@/lib/client/api/search-stats";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

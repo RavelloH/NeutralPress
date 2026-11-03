@@ -5,13 +5,13 @@ import { useMemo } from "react";
 import type { SearchLogStatsResult } from "@repo/shared-types/api/search";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { getSearchLogStats } from "@/actions/search";
 import BarChart, {
   type BarChartDataPoint,
   type SeriesConfig,
 } from "@/components/client/charts/BarChart";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getSearchLogStats } from "@/lib/client/api/search-stats";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 

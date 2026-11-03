@@ -22,6 +22,7 @@ import { jwtTokenVerify } from "@/lib/server/jwt";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
+import { getUnreadNoticeCount as getUnreadNoticeCountService } from "@/lib/server/services/notice";
 import { validateData } from "@/lib/server/validator";
 
 type NoticeActionEnvironment = "serverless" | "serveraction";
@@ -410,7 +411,7 @@ export async function markAllNoticesAsRead(
 }
 
 /**
- * 获取未读通知数量
+ * 兼容旧客户端的 Server Action。业务实现与权限校验已移至 server-only 服务层。
  */
 export async function getUnreadNoticeCount(serverConfig: {
   environment: "serverless";
@@ -423,65 +424,5 @@ export async function getUnreadNoticeCount(
 export async function getUnreadNoticeCount(
   serverConfig?: NoticeActionConfig,
 ): Promise<ActionResult<GetUnreadNoticeCountSuccessResponse["data"] | null>> {
-  const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction",
-  );
-
-  // 速率控制
-  if (!(await limitControl(await headers(), "getUnreadNoticeCount"))) {
-    return response.tooManyRequests();
-  }
-
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("ACCESS_TOKEN")?.value;
-    const user = await authVerify({
-      allowedRoles: ["USER", "ADMIN", "EDITOR", "AUTHOR"],
-      accessToken: token,
-    });
-
-    if (!user) {
-      return response.unauthorized({
-        message: "未登录",
-      });
-    }
-
-    const count = await prisma.notice.count({
-      where: {
-        userUid: user.uid,
-        isRead: false,
-      },
-    });
-
-    // 查询私信未读数：汇总所有私聊对话的 unreadCount
-    const messageUnreadResult = await prisma.conversationParticipant.aggregate({
-      where: {
-        userUid: user.uid,
-      },
-      _sum: {
-        unreadCount: true,
-      },
-    });
-
-    const messageCount = messageUnreadResult._sum?.unreadCount || 0;
-
-    return response.ok({
-      message: "获取未读通知数量成功",
-      data: {
-        count,
-        messageCount,
-      },
-    }) as unknown as ActionResult<
-      GetUnreadNoticeCountSuccessResponse["data"] | null
-    >;
-  } catch (error) {
-    console.error("获取未读通知数量失败:", error);
-    return response.serverError({
-      message: "获取未读通知数量失败",
-      error: {
-        code: "SERVER_ERROR",
-        message: "获取未读通知数量失败",
-      },
-    });
-  }
+  return getUnreadNoticeCountService(serverConfig);
 }

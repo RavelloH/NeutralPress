@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getUnreadNoticeCount } from "@/actions/notice";
 import { GET } from "@/app/api/public/notifications/unread/route";
+import { getUnreadNoticeCount } from "@/lib/server/services/notice";
 
-vi.mock("@/actions/notice", () => ({
+vi.mock("@/lib/server/services/notice", () => ({
   getUnreadNoticeCount: vi.fn(),
 }));
 
