@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
 import type { SecurityOverviewData } from "@repo/shared-types/api/security";
 
-import { getSecurityOverview } from "@/actions/security";
 import ErrorPage from "@/components/ui/Error";
 import Link from "@/components/ui/Link";
+import { getSecurityOverview } from "@/lib/client/api/security-read";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
@@ -39,14 +39,18 @@ export default function DashboardSecurityStats() {
       setResult(null);
     }
     setError(null);
-    const res = await getSecurityOverview({ force: forceRefresh });
-    if (!res.success) {
-      setError(new Error(res.message || "获取安全概览失败"));
-      return;
+    try {
+      const res = await getSecurityOverview({ force: forceRefresh });
+      if (!res.success) {
+        setError(new Error(res.message || "获取安全概览失败"));
+        return;
+      }
+      if (!res.data) return;
+      setResult(res.data);
+      setRefreshTime(new Date(res.data.updatedAt));
+    } catch (error) {
+      setError(error instanceof Error ? error : new Error("获取安全概览失败"));
     }
-    if (!res.data) return;
-    setResult(res.data);
-    setRefreshTime(new Date(res.data.updatedAt));
   };
 
   useEffect(() => {

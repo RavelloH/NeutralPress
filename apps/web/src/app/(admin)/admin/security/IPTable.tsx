@@ -9,10 +9,11 @@ import {
 } from "@remixicon/react";
 import type { IPInfo } from "@repo/shared-types/api/security";
 
-import { banIP, clearRateLimit, getIPList, unbanIP } from "@/actions/security";
+import { banIP, clearRateLimit, unbanIP } from "@/actions/security";
 import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getIPList } from "@/lib/client/api/security-read";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";

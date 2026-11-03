@@ -611,7 +611,10 @@ describe("security actions", () => {
   describe("getRequestTrends 分支", () => {
     it("数据库错误时返回失败", async () => {
       mockAuthVerify.mockResolvedValue({ uid: 1, role: "ADMIN" });
-      mockRedisZrangebyscore.mockRejectedValue(new Error("Redis error"));
+      mockRedisPipeline.mockReturnValue({
+        get: vi.fn(),
+        exec: vi.fn().mockRejectedValue(new Error("Redis error")),
+      });
       const mod = await import("@/actions/security");
       const result = await mod.getRequestTrends({
         access_token: "token",

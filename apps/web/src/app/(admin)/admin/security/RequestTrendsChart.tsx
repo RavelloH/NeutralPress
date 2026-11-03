@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { RequestTrendItem } from "@repo/shared-types/api/security";
 
-import { getRequestTrends } from "@/actions/security";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
@@ -11,6 +10,7 @@ import AreaChart, {
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getRequestTrends } from "@/lib/client/api/security-read";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 

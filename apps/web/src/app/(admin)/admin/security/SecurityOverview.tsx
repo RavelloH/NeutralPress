@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
 import type { SecurityOverviewData } from "@repo/shared-types/api/security";
 
-import { getSecurityOverview } from "@/actions/security";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { getSecurityOverview } from "@/lib/client/api/security-read";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
@@ -43,18 +43,24 @@ export default function SecurityOverview() {
         setResult(null);
       }
       setError(null);
-      const res = await getSecurityOverview({ force: forceRefresh });
-      if (!res.success) {
-        setError(new Error(res.message || "获取安全概览失败"));
-        return;
-      }
-      if (!res.data) return;
-      setResult(res.data);
-      setIsCache(res.data.cache);
-      setRefreshTime(new Date(res.data.updatedAt));
+      try {
+        const res = await getSecurityOverview({ force: forceRefresh });
+        if (!res.success) {
+          setError(new Error(res.message || "获取安全概览失败"));
+          return;
+        }
+        if (!res.data) return;
+        setResult(res.data);
+        setIsCache(res.data.cache);
+        setRefreshTime(new Date(res.data.updatedAt));
 
-      if (forceRefresh) {
-        await broadcast({ type: "security-refresh" });
+        if (forceRefresh) {
+          await broadcast({ type: "security-refresh" });
+        }
+      } catch (error) {
+        setError(
+          error instanceof Error ? error : new Error("获取安全概览失败"),
+        );
       }
     },
     [broadcast],

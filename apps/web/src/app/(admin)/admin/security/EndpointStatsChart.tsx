@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import type { EndpointStat } from "@repo/shared-types/api/security";
 
-import { getEndpointStats } from "@/actions/security";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getEndpointStats } from "@/lib/client/api/security-read";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";
 import { AutoTransition } from "@/ui/AutoTransition";
