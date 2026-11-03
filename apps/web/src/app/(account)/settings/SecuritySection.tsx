@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 
-import { getTotpStatus } from "@/actions/totp";
 import PasskeyManager from "@/app/(account)/settings/PasskeyManager";
 import {
   getProviderIcon,
@@ -13,6 +12,7 @@ import {
   type TotpDialogsRef,
 } from "@/app/(account)/settings/TotpDialogs";
 import type { PendingAction } from "@/app/(account)/settings/use-reauth";
+import { getTotpStatus } from "@/lib/client/api/account-security-read";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";

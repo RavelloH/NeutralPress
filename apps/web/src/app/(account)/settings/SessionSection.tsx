@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RiDeleteBinLine } from "@remixicon/react";
 
-import { getSessions } from "@/actions/auth";
 import { getDeviceIcon } from "@/app/(account)/settings/settingsHelpers";
+import { getSessions } from "@/lib/client/api/account-security-read";
 import { formatRelativeTime } from "@/lib/shared/relative-time";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";

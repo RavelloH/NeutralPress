@@ -31,6 +31,7 @@ import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import ResponseBuilder from "@/lib/server/response";
+import * as totpStatusService from "@/lib/server/services/totp-status-domain";
 import {
   checkTotpFailCount,
   decryptBackupCode,
@@ -62,22 +63,6 @@ type ActionResult<T extends ApiResponseData> =
 /**
  * 获取备份码剩余数量
  */
-function getBackupCodesRemaining(backupCodesData: unknown): number {
-  if (!backupCodesData || typeof backupCodesData !== "object") {
-    return 0;
-  }
-
-  const data = backupCodesData as {
-    codes?: Array<{ code: string; used: boolean }>;
-  };
-
-  if (!Array.isArray(data.codes)) {
-    return 0;
-  }
-
-  return data.codes.filter((c) => !c.used).length;
-}
-
 // ============================================================================
 // verifyTotp - 验证 TOTP 并完成登录
 // ============================================================================
@@ -901,64 +886,13 @@ export async function regenerateBackupCodes(
 export async function getTotpStatus(serverConfig: {
   environment: "serverless";
 }): Promise<NextResponse<ApiResponse<TotpStatusResponse["data"]>>>;
+
 export async function getTotpStatus(
   serverConfig?: AuthActionConfig,
 ): Promise<ApiResponse<TotpStatusResponse["data"]>>;
+
 export async function getTotpStatus(
   serverConfig?: AuthActionConfig,
 ): Promise<ActionResult<TotpStatusResponse["data"] | null>> {
-  const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction",
-  );
-
-  try {
-    // 从 ACCESS_TOKEN 中获取用户 UID
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get("ACCESS_TOKEN")?.value;
-    if (!accessToken) {
-      return response.unauthorized({
-        message: "未登录",
-      });
-    }
-
-    const decoded = jwtTokenVerify<AccessTokenPayload>(accessToken);
-    if (!decoded) {
-      return response.unauthorized({
-        message: "未登录",
-      });
-    }
-
-    const { uid } = decoded;
-
-    // 查询用户 TOTP 状态
-    const user = await prisma.user.findUnique({
-      where: { uid },
-      select: {
-        totpSecret: true,
-        totpBackupCodes: true,
-      },
-    });
-
-    if (!user) {
-      return response.unauthorized({
-        message: "用户不存在",
-      });
-    }
-
-    const enabled = !!user.totpSecret;
-    const backupCodesRemaining = getBackupCodesRemaining(user.totpBackupCodes);
-
-    return response.ok({
-      message: "获取 TOTP 状态成功",
-      data: {
-        enabled,
-        backupCodesRemaining,
-      },
-    });
-  } catch (error) {
-    console.error("Get TOTP status error:", error);
-    return response.serverError({
-      message: "获取状态失败，请稍后重试",
-    });
-  }
+  return totpStatusService.getTotpStatus(serverConfig);
 }
