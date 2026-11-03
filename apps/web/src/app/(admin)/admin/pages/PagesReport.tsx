@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { RiFileAddLine, RiRefreshLine } from "@remixicon/react";
 
 import { createPage } from "@/actions/page";
-import { getPagesStats } from "@/actions/stat";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { getPagesStats } from "@/lib/client/api/stats";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { getPageEditorPathByContentType } from "@/lib/shared/page-editor-route";
 import { AutoTransition } from "@/ui/AutoTransition";

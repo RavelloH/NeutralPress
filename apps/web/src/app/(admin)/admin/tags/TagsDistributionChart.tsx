@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TagDistributionItem } from "@repo/shared-types/api/tag";
 
-import { getTagsDistribution } from "@/actions/tag";
 import DimensionStatsChart, {
   type DimensionStatsItem,
 } from "@/components/client/charts/DimensionStatsChart";
@@ -11,6 +10,7 @@ import { GridItem } from "@/components/client/layout/RowGrid";
 import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getTagsDistribution } from "@/lib/client/api/tag";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";
 import { AutoTransition } from "@/ui/AutoTransition";

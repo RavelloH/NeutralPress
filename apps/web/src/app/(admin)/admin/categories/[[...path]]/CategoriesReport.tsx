@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { RiAddLine, RiArrowLeftSLine, RiRefreshLine } from "@remixicon/react";
 
 import { createCategory } from "@/actions/category";
-import { getCategoriesStats } from "@/actions/stat";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { getCategoriesStats } from "@/lib/client/api/stats";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
 import Clickable from "@/ui/Clickable";

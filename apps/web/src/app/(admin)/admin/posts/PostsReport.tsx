@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { RiRefreshLine, RiStickyNoteAddFill } from "@remixicon/react";
 
-import { getPostsStats } from "@/actions/stat";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import Link from "@/components/ui/Link";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { getPostsStats } from "@/lib/client/api/stats";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";

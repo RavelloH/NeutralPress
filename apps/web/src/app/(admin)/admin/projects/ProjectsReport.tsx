@@ -5,7 +5,6 @@ import { RiFolderAddFill, RiGithubFill, RiRefreshLine } from "@remixicon/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { createProject, syncProjectsGithub } from "@/actions/project";
-import { getProjectsStats } from "@/actions/stat";
 import { CategoryInput } from "@/components/client/features/categories/CategoryInput";
 import MediaSelector from "@/components/client/features/media/MediaSelector";
 import type { SelectedTag } from "@/components/client/features/tags/TagInput";
@@ -13,6 +12,7 @@ import { TagInput } from "@/components/client/features/tags/TagInput";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { getProjectsStats } from "@/lib/client/api/stats";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";

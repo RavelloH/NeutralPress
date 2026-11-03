@@ -13,7 +13,6 @@ import type { CategoryListItem } from "@repo/shared-types/api/category";
 
 import {
   deleteCategories,
-  getCategoriesList,
   moveCategories,
   updateCategory,
 } from "@/actions/category";
@@ -24,6 +23,7 @@ import GridTable from "@/components/ui/GridTable";
 import Link from "@/components/ui/Link";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getCategoriesList } from "@/lib/client/api/category";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";

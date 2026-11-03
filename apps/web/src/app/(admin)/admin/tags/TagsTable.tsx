@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { RiDeleteBinLine, RiEditLine, RiFileListLine } from "@remixicon/react";
 import type { TagListItem } from "@repo/shared-types/api/tag";
 
-import { deleteTags, getTagsList, updateTag } from "@/actions/tag";
+import { deleteTags, updateTag } from "@/actions/tag";
 import MediaSelector from "@/components/client/features/media/MediaSelector";
 import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import Link from "@/components/ui/Link";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getTagsList } from "@/lib/client/api/tag";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";

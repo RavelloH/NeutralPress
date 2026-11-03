@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
 
-import { getPagesStats } from "@/actions/stat";
 import ErrorPage from "@/components/ui/Error";
 import Link from "@/components/ui/Link";
+import { getPagesStats } from "@/lib/client/api/stats";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";

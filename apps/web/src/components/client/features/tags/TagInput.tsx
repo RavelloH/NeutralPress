@@ -5,8 +5,8 @@ import { RiAddLine, RiPriceTag3Line } from "@remixicon/react";
 import type { SearchTagItem } from "@repo/shared-types/api/tag";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { searchTags } from "@/actions/tag";
 import { TagChip } from "@/components/client/features/tags/TagChip";
+import { searchTags } from "@/lib/client/api/tag";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Input } from "@/ui/Input";

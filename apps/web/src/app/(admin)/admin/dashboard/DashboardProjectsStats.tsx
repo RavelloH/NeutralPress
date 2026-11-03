@@ -3,9 +3,9 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { RiGithubFill, RiRefreshLine } from "@remixicon/react";
 
-import { getProjectsStats } from "@/actions/stat";
 import ErrorPage from "@/components/ui/Error";
 import Link from "@/components/ui/Link";
+import { getProjectsStats } from "@/lib/client/api/stats";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";

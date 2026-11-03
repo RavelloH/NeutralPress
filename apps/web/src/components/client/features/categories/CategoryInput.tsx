@@ -5,7 +5,7 @@ import { RiAddLine, RiCloseLine, RiFolderLine } from "@remixicon/react";
 import type { SearchCategoryItem } from "@repo/shared-types/api/category";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { searchCategories } from "@/actions/category";
+import { searchCategories } from "@/lib/client/api/category";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Input } from "@/ui/Input";

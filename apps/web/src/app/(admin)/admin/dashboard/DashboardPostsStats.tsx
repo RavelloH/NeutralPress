@@ -9,10 +9,10 @@ import {
 } from "@remixicon/react";
 import type { GetPostsStatsSuccessResponse } from "@repo/shared-types/api/stats";
 
-import { getPostsStats } from "@/actions/stat";
 import ErrorPage from "@/components/ui/Error";
 import Link from "@/components/ui/Link";
 import { useMobile } from "@/hooks/use-mobile";
+import { getPostsStats } from "@/lib/client/api/stats";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
