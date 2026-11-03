@@ -10,7 +10,6 @@ import type {
 import {
   DryRunBackupImportSchema,
   ExportBackupSchema,
-  GetBackupScopesSchema,
   ImportBackupSchema,
   InitBackupImportUploadSchema,
 } from "@repo/shared-types/api/backup";
@@ -23,16 +22,17 @@ import type { NextResponse } from "next/server";
 
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
+import type { getBackupScopes as getBackupScopesService } from "@/lib/server/backup";
 import {
   BACKUP_DIRECT_LIMIT_BYTES,
   createBackupExport,
   dryRunBackupImport as dryRunBackupImportService,
-  getBackupScopes as getBackupScopesService,
   importBackup as importBackupService,
   initBackupImportUpload as initBackupImportUploadService,
 } from "@/lib/server/backup";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
+import * as backupScopesDomain from "@/lib/server/services/backup-scopes-domain";
 import { validateData } from "@/lib/server/validator";
 
 type ActionEnvironment = "serverless" | "serveraction";
@@ -57,6 +57,7 @@ export async function getBackupScopes(
 ): Promise<
   NextResponse<ApiResponse<ReturnType<typeof getBackupScopesService> | null>>
 >;
+
 export async function getBackupScopes(
   params: GetBackupScopes,
   serverConfig?: ActionConfig,
@@ -65,40 +66,7 @@ export async function getBackupScopes(
   { access_token }: GetBackupScopes,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<ReturnType<typeof getBackupScopesService> | null>> {
-  const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction",
-  );
-
-  if (!(await limitControl(await headers(), "getBackupScopes"))) {
-    return response.tooManyRequests();
-  }
-
-  const validationError = validateData(
-    {
-      access_token,
-    },
-    GetBackupScopesSchema,
-  );
-  if (validationError) return response.badRequest(validationError);
-
-  const user = await authVerify({
-    allowedRoles: ["ADMIN"],
-    accessToken: access_token,
-  });
-  if (!user) {
-    return response.unauthorized();
-  }
-
-  try {
-    return response.ok({
-      data: getBackupScopesService(),
-    });
-  } catch (error) {
-    console.error("Get backup scopes error:", error);
-    return response.serverError({
-      message: toErrorMessage(error, "获取备份分组失败"),
-    });
-  }
+  return backupScopesDomain.getBackupScopes({ access_token }, serverConfig);
 }
 
 /*

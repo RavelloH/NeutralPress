@@ -18,11 +18,11 @@ import { put as putBlob } from "@vercel/blob/client";
 import {
   dryRunBackupImport,
   exportBackup,
-  getBackupScopes,
   initBackupImportUpload,
 } from "@/actions/backup";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import Link from "@/components/ui/Link";
+import { getBackupScopes } from "@/lib/client/api/backup-scopes-read";
 import { resolveApiResponse } from "@/lib/client/run-with-auth";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { formatBytes } from "@/lib/shared/format";
@@ -174,10 +174,7 @@ export default function BackupsPanel() {
   const loadScopes = useCallback(async () => {
     setLoadingScopes(true);
     try {
-      const result = await runWithAuth(getBackupScopes, {
-        access_token: undefined,
-      });
-      const apiResponse = await resolveApiResponse(result);
+      const apiResponse = await getBackupScopes();
       if (!apiResponse?.success || !apiResponse.data) {
         toast.error(apiResponse?.message || "获取备份分组失败");
         return;
