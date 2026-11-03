@@ -100,7 +100,7 @@ vi.mock("@/lib/server/redis", () => ({
 }));
 
 const mockCheckReauthToken = vi.fn();
-vi.mock("@/actions/reauth", () => ({
+vi.mock("@/lib/server/reauth-verify", () => ({
   checkReauthToken: (...args: unknown[]) => mockCheckReauthToken(...args),
 }));
 
@@ -537,6 +537,9 @@ describe("passkey actions", () => {
       expect(result.success).toBe(true);
       expect(result.data?.items).toHaveLength(1);
       expect(result.data?.items[0]!.name).toBe("MacBook");
+      expect(mockPrismaPasskeyFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userUid: 1 } }),
+      );
     });
   });
 

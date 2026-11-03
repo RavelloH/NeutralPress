@@ -19,16 +19,18 @@ import { cookies, headers } from "next/headers";
 import { after } from "next/server";
 import { UAParser } from "ua-parser-js";
 
-import { checkReauthToken } from "@/actions/reauth";
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
-import { getConfig, getConfigs } from "@/lib/server/config-cache";
+import { getConfigs } from "@/lib/server/config-cache";
 import { getClientUserAgent } from "@/lib/server/get-client-info";
 import { jwtTokenSign } from "@/lib/server/jwt";
+import { assertPasskeyEnabledAndLimit } from "@/lib/server/passkey";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
+import { checkReauthToken } from "@/lib/server/reauth-verify";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import ResponseBuilder from "@/lib/server/response";
+import * as passkeyReadService from "@/lib/server/services/passkey-read-domain";
 
 // Redis keys
 const REG_CHALLENGE_KEY = (uid: number) => `passkey:challenge:reg:${uid}`;
@@ -47,15 +49,6 @@ async function getRPConfig() {
 }
 
 // 公共工具：检查是否启用 & 限制个数
-async function assertPasskeyEnabledAndLimit(uid?: number) {
-  const enabled = await getConfig("user.passkey.enabled");
-  if (!enabled) throw new Error("PASSKEY_DISABLED");
-  if (uid) {
-    const maxPerUser = await getConfig("user.passkey.maxPerUser");
-    const count = await prisma.passkey.count({ where: { userUid: uid } });
-    if (count >= maxPerUser) throw new Error("PASSKEY_LIMIT_EXCEEDED");
-  }
-}
 
 // ===== 注册（需要登录 + reauth） =====
 export async function generatePasskeyRegistrationOptions(): Promise<
@@ -833,76 +826,7 @@ export async function listUserPasskeys(): Promise<
     }>;
   }>
 > {
-  const response = new ResponseBuilder("serveraction");
-  try {
-    // 使用统一的 authVerify 进行身份验证
-    const authUser = await authVerify({
-      allowedRoles: ["USER", "ADMIN", "EDITOR", "AUTHOR"],
-    });
-    if (!authUser)
-      return response.unauthorized({
-        message: "请先登录",
-      }) as unknown as ApiResponse<{
-        items: Array<{
-          credentialId: string;
-          name: string;
-          deviceType: string | null;
-          browser: string | null;
-          createdAt: string;
-          lastUsedAt: string | null;
-        }>;
-      }>;
-    await assertPasskeyEnabledAndLimit();
-    const items = await prisma.passkey.findMany({
-      where: { userUid: authUser.uid },
-      orderBy: { createdAt: "desc" },
-      select: {
-        credentialId: true,
-        name: true,
-        deviceType: true,
-        browser: true,
-        createdAt: true,
-        lastUsedAt: true,
-      },
-    });
-    return response.ok({
-      message: "获取成功",
-      data: {
-        items: items.map((i) => ({
-          credentialId: i.credentialId,
-          name: i.name,
-          deviceType: i.deviceType ?? null,
-          browser: i.browser ?? null,
-          createdAt: i.createdAt.toISOString(),
-          lastUsedAt: i.lastUsedAt ? i.lastUsedAt.toISOString() : null,
-        })),
-      },
-    }) as unknown as ApiResponse<{
-      items: Array<{
-        credentialId: string;
-        name: string;
-        deviceType: string | null;
-        browser: string | null;
-        createdAt: string;
-        lastUsedAt: string | null;
-      }>;
-    }>;
-  } catch (error) {
-    console.error("listUserPasskeys error:", error);
-    return response.serverError({
-      message: "获取失败",
-      error: { code: "SERVER_ERROR", message: "获取失败" },
-    }) as unknown as ApiResponse<{
-      items: Array<{
-        credentialId: string;
-        name: string;
-        deviceType: string | null;
-        browser: string | null;
-        createdAt: string;
-        lastUsedAt: string | null;
-      }>;
-    }>;
-  }
+  return passkeyReadService.listUserPasskeys();
 }
 
 export async function renamePasskey({

@@ -14,10 +14,10 @@ import { startRegistration } from "@simplewebauthn/browser";
 import {
   deletePasskey,
   generatePasskeyRegistrationOptions,
-  listUserPasskeys,
   renamePasskey,
   verifyPasskeyRegistration,
 } from "@/actions/passkey";
+import { listUserPasskeys } from "@/lib/client/api/passkey-read";
 import { formatRelativeTime } from "@/lib/shared/relative-time";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoResizer } from "@/ui/AutoResizer";
@@ -64,13 +64,18 @@ export default function PasskeyManager() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res = await listUserPasskeys();
-    if (res.success) {
-      setItems(res.data!.items);
-    } else {
-      toast.error(res.message || "获取通行密钥失败");
+    try {
+      const res = await listUserPasskeys();
+      if (res.success && res.data) {
+        setItems(res.data.items);
+      } else {
+        toast.error(res.message || "获取通行密钥失败");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "获取通行密钥失败");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [toast]);
 
   function openReauthWindow() {
