@@ -65,6 +65,8 @@ vi.mock("@/data/check-config", () => ({
   getDoctorCheckOrder: vi.fn().mockReturnValue(1),
 }));
 
+vi.mock("@/lib/server/isr-invalidation", () => ({ expireCacheTag: vi.fn() }));
+
 vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
 
 vi.mock(".prisma/client", () => ({ Prisma: { JsonNull: null } }));

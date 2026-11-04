@@ -56,7 +56,10 @@ export async function getMenus(): Promise<MenuItem[]> {
   }
 
   // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
-  if (fs.existsSync(CACHE_FILE_PATH)) {
+  if (
+    process.env.NEUTRALPRESS_BUILD_CACHE_SNAPSHOT === "1" &&
+    fs.existsSync(CACHE_FILE_PATH)
+  ) {
     const menus = getMenusFromCache();
     if (menus.length > 0) {
       return menus;

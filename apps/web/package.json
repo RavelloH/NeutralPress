@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack --port 3000",
-    "build": "tsx scripts/prebuild.ts && cross-env NODE_OPTIONS=--max-old-space-size=4096 next build --webpack && tsx scripts/postbuild.ts",
+    "build": "tsx scripts/prebuild.ts && cross-env NEUTRALPRESS_BUILD_CACHE_SNAPSHOT=1 NODE_OPTIONS=--max-old-space-size=4096 next build --webpack && tsx scripts/postbuild.ts",
     "build:standalone": "cross-env BUILD_STANDALONE=true pnpm build",
     "build:portable": "cross-env BUILD_PROFILE=portable pnpm build",
     "build:portable:standalone": "cross-env BUILD_PROFILE=portable BUILD_STANDALONE=true pnpm build",

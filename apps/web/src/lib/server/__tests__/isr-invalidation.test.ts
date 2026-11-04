@@ -72,4 +72,18 @@ describe("event-driven ISR invalidation", () => {
     });
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
+
+  it("refreshes configurable homepage blocks for gallery and friend-link changes", () => {
+    for (const tag of ["gallery/list", "photos/example", "friend-links"]) {
+      vi.clearAllMocks();
+      expireCacheTag(tag);
+      expect(mocks.revalidatePath).toHaveBeenCalledWith("/[[...slug]]", "page");
+    }
+  });
+
+  it("invalidates shared author metadata after a user profile change", () => {
+    expireCacheTag("users/42");
+    expect(mocks.revalidateTag).toHaveBeenCalledWith("users/42", { expire: 0 });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
+  });
 });

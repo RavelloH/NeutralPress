@@ -36,11 +36,16 @@ export function expireCacheTag(tag: string): void {
     revalidatePath("/", "layout");
   } else if (tag === "gallery/list") {
     revalidatePath("/gallery", "page");
+    revalidatePath("/[[...slug]]", "page");
   } else if (tag.startsWith("photos/")) {
     revalidatePath(`/gallery/photo/${tag.slice("photos/".length)}`);
+    revalidatePath("/[[...slug]]", "page");
   } else if (tag.startsWith("tags/") || tag.startsWith("categories/")) {
     revalidatePath("/[[...slug]]", "page");
   } else if (tag === "friend-links") {
     revalidatePath("/friends", "page");
+    revalidatePath("/[[...slug]]", "page");
+  } else if (tag === "users" || tag.startsWith("users/")) {
+    revalidatePath("/", "layout");
   }
 }

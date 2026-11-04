@@ -59,7 +59,10 @@ export async function getRawConfig(key: string): Promise<ConfigItem | null> {
   }
 
   // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
-  if (fs.existsSync(CACHE_FILE_PATH)) {
+  if (
+    process.env.NEUTRALPRESS_BUILD_CACHE_SNAPSHOT === "1" &&
+    fs.existsSync(CACHE_FILE_PATH)
+  ) {
     const config = getConfigFromCache(key);
     if (config) {
       return config;
@@ -255,7 +258,10 @@ export async function getAllConfigs(): Promise<Record<string, ConfigItem>> {
   }
 
   // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
-  if (fs.existsSync(CACHE_FILE_PATH)) {
+  if (
+    process.env.NEUTRALPRESS_BUILD_CACHE_SNAPSHOT === "1" &&
+    fs.existsSync(CACHE_FILE_PATH)
+  ) {
     const allConfigs = getAllConfigsFromCache();
     if (Object.keys(allConfigs).length > 0) {
       return filterSensitiveConfigs(allConfigs);

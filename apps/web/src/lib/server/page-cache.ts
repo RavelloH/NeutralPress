@@ -745,7 +745,10 @@ export async function getRawPage(slug: string): Promise<PageItem | null> {
   }
 
   // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
-  if (fs.existsSync(CACHE_FILE_PATH)) {
+  if (
+    process.env.NEUTRALPRESS_BUILD_CACHE_SNAPSHOT === "1" &&
+    fs.existsSync(CACHE_FILE_PATH)
+  ) {
     const page = getPageFromCache(slug);
     if (page) {
       return page;
@@ -790,7 +793,10 @@ export async function getRawPageById(id: string): Promise<PageItem | null> {
   }
 
   // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
-  if (fs.existsSync(CACHE_FILE_PATH)) {
+  if (
+    process.env.NEUTRALPRESS_BUILD_CACHE_SNAPSHOT === "1" &&
+    fs.existsSync(CACHE_FILE_PATH)
+  ) {
     const page = getPageByIdFromCache(id);
     if (page) {
       return page;
@@ -1079,7 +1085,10 @@ export async function getAllActivePages(): Promise<Record<string, PageItem>> {
   }
 
   // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
-  if (fs.existsSync(CACHE_FILE_PATH)) {
+  if (
+    process.env.NEUTRALPRESS_BUILD_CACHE_SNAPSHOT === "1" &&
+    fs.existsSync(CACHE_FILE_PATH)
+  ) {
     const allPages = getAllPagesFromCache();
     if (Object.keys(allPages).length > 0) {
       return filterActivePages(allPages);
@@ -1267,7 +1276,10 @@ export async function getPagesByStatus(
   }
 
   // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
-  if (fs.existsSync(CACHE_FILE_PATH)) {
+  if (
+    process.env.NEUTRALPRESS_BUILD_CACHE_SNAPSHOT === "1" &&
+    fs.existsSync(CACHE_FILE_PATH)
+  ) {
     const allPages = getAllPagesFromCache();
     if (Object.keys(allPages).length > 0) {
       const filteredPages: Record<string, PageItem> = {};
@@ -1354,7 +1366,10 @@ export async function getSystemPages(): Promise<Record<string, PageItem>> {
   }
 
   // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
-  if (fs.existsSync(CACHE_FILE_PATH)) {
+  if (
+    process.env.NEUTRALPRESS_BUILD_CACHE_SNAPSHOT === "1" &&
+    fs.existsSync(CACHE_FILE_PATH)
+  ) {
     const allPages = getAllPagesFromCache();
     if (Object.keys(allPages).length > 0) {
       const systemPages: Record<string, PageItem> = {};
@@ -1436,7 +1451,10 @@ export async function getPagesByUser(
   }
 
   // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
-  if (fs.existsSync(CACHE_FILE_PATH)) {
+  if (
+    process.env.NEUTRALPRESS_BUILD_CACHE_SNAPSHOT === "1" &&
+    fs.existsSync(CACHE_FILE_PATH)
+  ) {
     const allPages = getAllPagesFromCache();
     if (Object.keys(allPages).length > 0) {
       const userPages: Record<string, PageItem> = {};

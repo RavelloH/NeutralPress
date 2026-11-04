@@ -77,6 +77,8 @@ vi.mock("@/data/check-config", () => ({
 }));
 
 // Mock next/cache
+vi.mock("@/lib/server/isr-invalidation", () => ({ expireCacheTag: vi.fn() }));
+
 vi.mock("next/cache", () => ({
   revalidateTag: vi.fn(),
 }));

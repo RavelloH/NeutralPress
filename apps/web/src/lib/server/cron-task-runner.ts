@@ -7,7 +7,6 @@ import type {
   FriendLinkStatus,
 } from "@repo/shared-types/api/friendlink";
 import type { SyncProjectsGithubResult } from "@repo/shared-types/api/project";
-import { revalidateTag } from "next/cache";
 
 import {
   formatDoctorCheckDetails,
@@ -17,6 +16,7 @@ import {
 import { flushEventsToDatabase } from "@/lib/server/analytics-flush";
 import { getConfig, getConfigs } from "@/lib/server/config-cache";
 import { runAutoCleanupMaintenance } from "@/lib/server/doctor-maintenance";
+import { expireCacheTag } from "@/lib/server/isr-invalidation";
 import prisma from "@/lib/server/prisma";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import {
@@ -748,9 +748,12 @@ export async function runProjectsGithubSync(
   const synced = syncResults.filter((item) => item.success).length;
   const failed = syncResults.filter((item) => !item.success).length;
 
-  revalidateTag("projects/list", "max");
-  for (const project of projects) {
-    revalidateTag(`projects/${project.slug}`, "max");
+  // Only invalidate successfully committed project updates.
+  if (synced > 0) {
+    expireCacheTag("projects/list");
+    for (const item of syncResults) {
+      if (item.success) expireCacheTag(`projects/${item.slug}`);
+    }
   }
 
   return {
@@ -1046,7 +1049,7 @@ export async function runFriendLinksCheck(
   }
 
   if (checked > 0) {
-    revalidateTag("friend-links", "max");
+    expireCacheTag("friend-links");
   }
 
   return {
