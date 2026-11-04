@@ -2,8 +2,6 @@ import type { NextRequest, NextResponse } from "next/server";
 
 import { getBackupScopes } from "@/lib/server/services/backup-scopes-domain";
 
-export const runtime = "nodejs";
-
 /** Admin-only catalog; backup exports, imports, and upload signing are never GET operations. */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   if ([...request.nextUrl.searchParams.keys()].length > 0) {

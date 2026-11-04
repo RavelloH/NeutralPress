@@ -4,8 +4,6 @@ import { z } from "zod";
 import { parseSameOriginJson } from "@/lib/server/api-json-post";
 import { getSettings } from "@/lib/server/services/settings-read-domain";
 
-export const runtime = "nodejs";
-
 const PRIVATE_HEADERS = {
   "Cache-Control": "private, no-store",
   "X-Content-Type-Options": "nosniff",

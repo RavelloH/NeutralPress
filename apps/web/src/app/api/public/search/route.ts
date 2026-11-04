@@ -11,7 +11,6 @@ import { searchSite } from "@/lib/server/services/search";
  * GET avoids the client-side Server Function serialization queue.
  * Search is never shared-cached because the query and telemetry are private.
  */
-export const runtime = "nodejs";
 
 const SEARCH_QUERY_MAX_LENGTH = 200;
 const SEARCH_METADATA_MAX_LENGTH = 100;

@@ -4,8 +4,6 @@ import type { NextRequest, NextResponse } from "next/server";
 import ResponseBuilder from "@/lib/server/response";
 import { getCronTrends } from "@/lib/server/services/cron-history";
 
-export const runtime = "nodejs";
-
 function reject(): NextResponse {
   const response = new ResponseBuilder("serverless").badRequest({
     message: "无效的计划任务查询参数",

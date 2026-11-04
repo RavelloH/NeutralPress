@@ -4,8 +4,6 @@ import { z } from "zod";
 import type { RuntimeBlockInput } from "@/blocks/core/definition";
 import { fetchBlockData } from "@/lib/server/services/page-domain";
 
-export const runtime = "nodejs";
-
 const MAX_BODY_SIZE = 128 * 1024;
 const InputSchema = z
   .object({

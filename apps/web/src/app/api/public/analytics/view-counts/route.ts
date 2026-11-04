@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import { batchGetViewCounts } from "@/lib/server/services/analytics-domain";
 
-export const runtime = "nodejs";
 const QuerySchema = z
   .object({
     paths: z.array(z.string().min(1).max(300)).min(1).max(20),

@@ -10,7 +10,6 @@ import { z } from "zod";
 import { authVerify } from "@/lib/server/auth-verify";
 import ResponseBuilder from "@/lib/server/response";
 import * as service from "@/lib/server/services/media-domain";
-export const runtime = "nodejs";
 function badRequest(): NextResponse {
   const response = new ResponseBuilder("serverless").badRequest({
     message: "无效的查询参数",

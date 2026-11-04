@@ -4,8 +4,6 @@ import type { NextRequest } from "next/server";
 import { parseSameOriginJson } from "@/lib/server/api-json-post";
 import { trackPageView } from "@/lib/server/services/analytics-domain";
 
-export const runtime = "nodejs";
-
 /** Anonymous, rate-limited and Redis-deduplicated event ingestion. */
 export async function POST(request: NextRequest) {
   const parsedBody = await parseSameOriginJson(request, 4096);

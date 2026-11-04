@@ -4,8 +4,6 @@ import type { NextResponse } from "next/server";
 import ResponseBuilder from "@/lib/server/response";
 import * as stats from "@/lib/server/services/stats";
 
-export const runtime = "nodejs";
-
 const handlers = {
   users: (force: boolean) =>
     stats.getUsersStats({ force }, { environment: "serverless" }),

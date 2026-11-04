@@ -8,8 +8,6 @@ import type { NextRequest, NextResponse } from "next/server";
 import { parseSameOriginJson } from "@/lib/server/api-json-post";
 import * as service from "@/lib/server/services/analytics-domain";
 
-export const runtime = "nodejs";
-
 function jsonResult(result: {
   success: boolean;
   error?: { code?: string };

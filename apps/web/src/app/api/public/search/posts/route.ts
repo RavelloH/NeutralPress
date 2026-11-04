@@ -5,7 +5,6 @@ import { parseSameOriginJson } from "@/lib/server/api-json-post";
 import { searchPosts } from "@/lib/server/services/search";
 
 /** Public published-post search via JSON POST; visitor IDs and keywords must not enter URL logs. */
-export const runtime = "nodejs";
 
 const PRIVATE_HEADERS = {
   "Cache-Control": "private, no-store",

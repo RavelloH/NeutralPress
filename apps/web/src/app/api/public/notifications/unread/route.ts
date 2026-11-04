@@ -6,7 +6,6 @@ import { getUnreadNoticeCount } from "@/lib/server/services/notice";
  *
  * Never cache notification counts at shared proxies or in the browser.
  */
-export const runtime = "nodejs";
 
 export async function GET() {
   const response = await getUnreadNoticeCount({ environment: "serverless" });

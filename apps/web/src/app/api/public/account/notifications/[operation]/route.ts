@@ -4,8 +4,6 @@ import { z } from "zod";
 import { parseSameOriginJson } from "@/lib/server/api-json-post";
 import * as service from "@/lib/server/services/notice-domain";
 
-export const runtime = "nodejs";
-
 const HEADERS = {
   "Cache-Control": "private, no-store",
   "X-Content-Type-Options": "nosniff",

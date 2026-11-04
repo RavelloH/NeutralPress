@@ -4,8 +4,6 @@ import type { NextRequest, NextResponse } from "next/server";
 import ResponseBuilder from "@/lib/server/response";
 import { getAuditLogs } from "@/lib/server/services/audit";
 
-export const runtime = "nodejs";
-
 function reject(): NextResponse {
   const response = new ResponseBuilder("serverless").badRequest({
     message: "无效的审计查询参数",

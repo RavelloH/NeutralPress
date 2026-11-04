@@ -9,8 +9,6 @@ import type { NextRequest, NextResponse } from "next/server";
 import { parseSameOriginJson } from "@/lib/server/api-json-post";
 import * as service from "@/lib/server/services/security-domain";
 
-export const runtime = "nodejs";
-
 const RESPONSE_HEADERS = {
   "Cache-Control": "private, no-store",
   "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none';",

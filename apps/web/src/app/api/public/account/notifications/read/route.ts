@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import { getReadNotices } from "@/lib/server/services/notice-domain";
 
-export const runtime = "nodejs";
 const HEADERS = {
   "Cache-Control": "private, no-store",
   "X-Content-Type-Options": "nosniff",

@@ -7,8 +7,6 @@ import type { NextRequest, NextResponse } from "next/server";
 import ResponseBuilder from "@/lib/server/response";
 import * as service from "@/lib/server/services/recycle-bin-domain";
 
-export const runtime = "nodejs";
-
 function invalidQuery(): NextResponse {
   const response = new ResponseBuilder("serverless").badRequest({
     message: "无效的查询参数",

@@ -10,8 +10,6 @@ import type { NextRequest, NextResponse } from "next/server";
 import { parseSameOriginJson } from "@/lib/server/api-json-post";
 import * as service from "@/lib/server/services/search-admin-domain";
 
-export const runtime = "nodejs";
-
 const PRIVATE_HEADERS = {
   "Cache-Control": "private, no-store",
   "X-Content-Type-Options": "nosniff",

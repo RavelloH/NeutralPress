@@ -4,8 +4,6 @@ import type { NextResponse } from "next/server";
 import ResponseBuilder from "@/lib/server/response";
 import { getSearchLogStats } from "@/lib/server/services/search-stats";
 
-export const runtime = "nodejs";
-
 function invalidParams(): NextResponse {
   const result = new ResponseBuilder("serverless").badRequest({
     message: "无效的查询参数",

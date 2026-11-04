@@ -2,8 +2,6 @@ import type { NextRequest } from "next/server";
 
 import { getCurrentUserForReauth } from "@/lib/server/services/reauth-profile-domain";
 
-export const runtime = "nodejs";
-
 const PRIVATE_HEADERS = {
   "Cache-Control": "private, no-store",
   "X-Content-Type-Options": "nosniff",

@@ -8,8 +8,6 @@ import { z } from "zod";
 import { parseSameOriginJson } from "@/lib/server/api-json-post";
 import * as service from "@/lib/server/services/cloud-domain";
 
-export const runtime = "nodejs";
-
 const RESPONSE_HEADERS = {
   "Cache-Control": "private, no-store",
   "X-Content-Type-Options": "nosniff",

@@ -2,8 +2,6 @@ import type { NextRequest, NextResponse } from "next/server";
 
 import { listUserPasskeys } from "@/lib/server/services/passkey-read-domain";
 
-export const runtime = "nodejs";
-
 const PRIVATE_HEADERS = {
   "Cache-Control": "private, no-store",
   "X-Content-Type-Options": "nosniff",

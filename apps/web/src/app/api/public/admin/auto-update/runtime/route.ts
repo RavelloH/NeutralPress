@@ -2,8 +2,6 @@ import type { NextRequest, NextResponse } from "next/server";
 
 import { getRuntimeVersionInfo } from "@/lib/server/services/auto-update-domain";
 
-export const runtime = "nodejs";
-
 const HEADERS = {
   "Cache-Control": "private, no-store",
   "X-Content-Type-Options": "nosniff",

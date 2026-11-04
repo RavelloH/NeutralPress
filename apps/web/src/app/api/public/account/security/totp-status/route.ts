@@ -2,8 +2,6 @@ import type { NextRequest } from "next/server";
 
 import { getTotpStatus } from "@/lib/server/services/totp-status-domain";
 
-export const runtime = "nodejs";
-
 function invalid() {
   return Response.json(
     {

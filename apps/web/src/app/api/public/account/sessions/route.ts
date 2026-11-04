@@ -2,8 +2,6 @@ import type { NextRequest } from "next/server";
 
 import { getSessions } from "@/lib/server/services/session-domain";
 
-export const runtime = "nodejs";
-
 function invalid() {
   return Response.json(
     {

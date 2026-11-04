@@ -8,8 +8,6 @@ import { z } from "zod";
 import ResponseBuilder from "@/lib/server/response";
 import * as service from "@/lib/server/services/page-domain";
 
-export const runtime = "nodejs";
-
 function invalidQuery(): NextResponse {
   const response = new ResponseBuilder("serverless").badRequest({
     message: "无效的查询参数",
