@@ -8,10 +8,6 @@ interface IconMetadata {
   id: string;
 }
 
-// 启用缓存
-export const revalidate = 3600;
-export const dynamic = "force-dynamic";
-
 const FALLBACK_SITE_URL = "http://localhost:3000";
 const FALLBACK_FAVICON_PATH = "/icon.png";
 

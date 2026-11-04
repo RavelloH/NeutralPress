@@ -64,6 +64,3 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     })),
   };
 }
-
-// 强制静态生成
-export const dynamic = "force-static";
