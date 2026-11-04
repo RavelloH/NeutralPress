@@ -1,3 +1,4 @@
+import CloudflareCacheSettings from "@/app/(admin)/admin/settings/CloudflareCacheSettings";
 import SettingsInfo from "@/app/(admin)/admin/settings/SettingsInfo";
 import SettingSelect from "@/app/(admin)/admin/settings/SettingsSelect";
 import SettingSheet from "@/app/(admin)/admin/settings/SettingsSheet";
@@ -34,6 +35,9 @@ export default function AuditLogsPage() {
         </RowGrid>
         <RowGrid>
           <SettingSheet />
+        </RowGrid>
+        <RowGrid>
+          <CloudflareCacheSettings />
         </RowGrid>
       </HorizontalScroll>
     </MainLayout>

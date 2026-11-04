@@ -22,6 +22,10 @@ const mocks = vi.hoisted(() => {
   };
 });
 vi.mock("next/server", () => ({ after: mocks.after }));
+const configMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/server/cloudflare-cache-config", () => ({
+  getCloudflareCacheCredentials: configMock,
+}));
 vi.mock("@/lib/server/redis", () => ({
   default: mocks.redis,
   ensureRedisConnection: vi.fn(async () => undefined),
@@ -36,6 +40,7 @@ import {
 describe("CDN cache invalidation pipeline", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    configMock.mockResolvedValue(null);
     mocks.callbackQueue.length = 0;
     vi.stubEnv("CLOUDFLARE_CACHE_ZONE_ID", "");
     vi.stubEnv("CLOUDFLARE_CACHE_PURGE_TOKEN", "");
@@ -61,7 +66,9 @@ describe("CDN cache invalidation pipeline", () => {
 
   it("never starts CDN work without both scoped credentials", async () => {
     scheduleCdnCacheRefresh(["/"]);
-    expect(mocks.after).not.toHaveBeenCalled();
+    expect(mocks.after).toHaveBeenCalledTimes(1);
+    await mocks.callbackQueue[0]!();
+    expect(mocks.redis.pipeline).not.toHaveBeenCalled();
     expect(await drainCdnCacheQueue()).toEqual({
       pending: 0,
       completed: 0,
@@ -70,8 +77,12 @@ describe("CDN cache invalidation pipeline", () => {
   });
 
   it("persists mutation, confirms origin HIT, purges the exact public URL", async () => {
-    vi.stubEnv("CLOUDFLARE_CACHE_ZONE_ID", "test-zone");
-    vi.stubEnv("CLOUDFLARE_CACHE_PURGE_TOKEN", "test-token");
+    configMock.mockResolvedValue({
+      zone: "test-zone",
+      token: "test-token",
+      siteUrl: "https://ravelloh.com",
+      source: "database",
+    });
     const calls: Array<{ url: string; method?: string; body?: string }> = [];
     vi.stubGlobal(
       "fetch",

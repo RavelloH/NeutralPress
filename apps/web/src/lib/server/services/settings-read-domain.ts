@@ -69,11 +69,13 @@ export async function getSettings(
     });
 
     // 转换数据格式
-    const data: SettingItem[] = configs.map((config) => ({
-      key: config.key,
-      value: config.value,
-      updatedAt: config.updatedAt.toISOString(),
-    }));
+    const data: SettingItem[] = configs
+      .filter((config) => !config.key.startsWith("secret."))
+      .map((config) => ({
+        key: config.key,
+        value: config.value,
+        updatedAt: config.updatedAt.toISOString(),
+      }));
 
     return response.ok({ data });
   } catch (error) {

@@ -76,21 +76,25 @@ async function generateConfigCache(options?: {
 
       const result: Record<string, ConfigItem> = {};
 
-      configs.forEach(
-        (config: {
-          key: string;
-          value: unknown;
-          description: string | null;
-          updatedAt: Date;
-        }) => {
-          result[config.key] = {
-            key: config.key,
-            value: config.value,
-            description: config.description,
-            updatedAt: config.updatedAt,
-          };
-        },
-      );
+      // Credentials stored in Config (e.g. CDN tokens) are runtime-only.
+      // Never copy secret.* rows into build snapshots or deployment artifacts.
+      configs
+        .filter((config: { key: string }) => !config.key.startsWith("secret."))
+        .forEach(
+          (config: {
+            key: string;
+            value: unknown;
+            description: string | null;
+            updatedAt: Date;
+          }) => {
+            result[config.key] = {
+              key: config.key,
+              value: config.value,
+              description: config.description,
+              updatedAt: config.updatedAt,
+            };
+          },
+        );
 
       // 写入缓存文件
       fs.writeFileSync(

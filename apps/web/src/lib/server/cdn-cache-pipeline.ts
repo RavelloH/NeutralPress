@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { after } from "next/server";
 
+import { getCloudflareCacheCredentials } from "@/lib/server/cloudflare-cache-config";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 
 // Only explicitly audited, anonymous HTML documents may enter shared CDN cache.
@@ -18,14 +19,7 @@ const ALLOWED_PATHS = new Set<string>(PUBLIC_HTML_CDN_PATHS);
 const QUEUE_KEY = "np:cdn:html-invalidation";
 const LOCK_KEY = "np:cdn:html-invalidation:lock";
 const ORIGIN = "http://127.0.0.1:3000";
-const WEBSITE = "https://ravelloh.com";
 const MAX_PER_PASS = 4;
-
-function credentials(): { zone: string; token: string } | null {
-  const zone = process.env.CLOUDFLARE_CACHE_ZONE_ID?.trim();
-  const token = process.env.CLOUDFLARE_CACHE_PURGE_TOKEN?.trim();
-  return zone && token ? { zone, token } : null;
-}
 
 export function eligibleCdnPaths(paths: Iterable<string>): string[] {
   return [...new Set(paths)].filter((path) => ALLOWED_PATHS.has(path)).sort();
@@ -63,6 +57,7 @@ async function purgeUrls(
   paths: string[],
   zone: string,
   token: string,
+  siteUrl: string,
 ): Promise<void> {
   const response = await fetch(
     "https://api.cloudflare.com/client/v4/zones/" + zone + "/purge_cache",
@@ -72,7 +67,7 @@ async function purgeUrls(
         authorization: "Bearer " + token,
         "content-type": "application/json",
       },
-      body: JSON.stringify({ files: paths.map((path) => WEBSITE + path) }),
+      body: JSON.stringify({ files: paths.map((path) => siteUrl + path) }),
       cache: "no-store",
       signal: AbortSignal.timeout(15000),
     },
@@ -99,7 +94,7 @@ export async function drainCdnCacheQueue(): Promise<{
   completed: number;
   configured: boolean;
 }> {
-  const auth = credentials();
+  const auth = await getCloudflareCacheCredentials();
   if (!auth) return { pending: 0, completed: 0, configured: false };
   await ensureRedisConnection();
   const owner = randomUUID();
@@ -132,7 +127,7 @@ export async function drainCdnCacheQueue(): Promise<{
         if (!(await warmPage(path))) {
           throw new Error("Origin did not return a regenerated ISR HIT");
         }
-        await purgeUrls([path], auth.zone, auth.token);
+        await purgeUrls([path], auth.zone, auth.token, auth.siteUrl);
         await redis.eval(
           "local n=redis.call('ZSCORE',KEYS[1],ARGV[1]); " +
             "if n and tonumber(n)<=tonumber(ARGV[2]) then return redis.call('ZREM',KEYS[1],ARGV[1]) end return 0",
@@ -166,12 +161,13 @@ export async function drainCdnCacheQueue(): Promise<{
  * Never enable Cloudflare HTML caching without first configuring purge credentials.
  */
 export function scheduleCdnCacheRefresh(paths: Iterable<string>): void {
-  if (!credentials()) return;
   const selected = eligibleCdnPaths(paths);
   if (!selected.length) return;
 
   const work = async () => {
     try {
+      // Configuration is read from the database for every mutation, without restart.
+      if (!(await getCloudflareCacheCredentials())) return;
       await enqueue(selected);
       await drainCdnCacheQueue();
     } catch (error) {
