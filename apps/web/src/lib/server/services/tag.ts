@@ -26,12 +26,12 @@ import {
   SearchTagsSchema,
   UpdateTagSchema,
 } from "@repo/shared-types/api/tag";
-import { updateTag as updateTags } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
+import { expireCacheTag as updateTags } from "@/lib/server/isr-invalidation";
 import {
   findMediaIdByUrl,
   getFeaturedImageUrl,

@@ -1,5 +1,3 @@
-import { cacheLife, cacheTag } from "next/cache";
-
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import { type ConfigItem, getRawConfig } from "@/lib/server/config-cache";
 import { PUBLIC_VISIBLE_POST_WHERE } from "@/lib/server/post-access";
@@ -163,18 +161,6 @@ async function getSitemapTags(): Promise<SitemapDataItem[]> {
 }
 
 export async function getSitemapData(): Promise<SitemapData> {
-  "use cache";
-
-  cacheTag(
-    "posts/list",
-    "projects/list",
-    "pages",
-    "categories/list",
-    "tags/list",
-    "config/site.url",
-  );
-  cacheLife("max");
-
   const [siteUrlConfig, posts, projects, pages, categories, tags] =
     await Promise.all([
       getRawConfig("site.url"),

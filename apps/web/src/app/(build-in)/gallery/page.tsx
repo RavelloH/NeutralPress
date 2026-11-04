@@ -1,11 +1,11 @@
-import { cacheLife, cacheTag } from "next/cache";
-
 import GalleryClient from "@/app/(build-in)/gallery/GalleryClient";
 import MainLayout from "@/components/client/layout/MainLayout";
 import JsonLdScript from "@/components/server/seo/JsonLdScript";
 import { getGalleryPhotosData } from "@/lib/server/media";
 import { getRawPage } from "@/lib/server/page-cache";
 import { generateJsonLdGraph, generateMetadata } from "@/lib/server/seo";
+
+export const revalidate = false;
 
 const page = await getRawPage("/gallery");
 
@@ -24,23 +24,6 @@ export const metadata = await generateMetadata(
 );
 
 export default async function GalleryIndex() {
-  "use cache";
-  cacheTag(
-    "gallery/list",
-    "config/site.url",
-    "config/site.title",
-    "config/seo.description",
-    "config/author.name",
-    "config/site.avatar",
-    "config/seo.index.enable",
-    "config/media.gallery.sortByShotTime",
-    "config/media.gallery.sortOrder",
-  );
-  if (page?.id) {
-    cacheTag(`pages/${page.id}`);
-  }
-  cacheLife("max");
-
   const { photos, nextCursor } = await getGalleryPhotosData({});
   const jsonLdGraph = await generateJsonLdGraph({
     kind: "gallery",

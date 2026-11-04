@@ -1,14 +1,11 @@
-import { cacheLife, cacheTag } from "next/cache";
 import { notFound } from "next/navigation";
 
-import type { RuntimeBlockInput } from "@/blocks/core/definition";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
 import PageTextContentLayout from "@/components/server/features/pages/PageTextContentLayout";
 import BlockRenderer from "@/components/server/renderer/BlockRenderer";
 import JsonLdScript from "@/components/server/seo/JsonLdScript";
 import type { PageConfig } from "@/data/default-pages";
-import { buildPageCacheTagsForBlocks } from "@/lib/server/block-cache";
 import { resolveBlockData } from "@/lib/server/block-data-resolver";
 import { getActiveMenusByCategory } from "@/lib/server/menu-cache";
 import {
@@ -29,6 +26,8 @@ import {
 export async function generateStaticParams() {
   return getMainRouteTopLevelStaticParams();
 }
+
+export const revalidate = false;
 
 const pageTextRenderModeMap = {
   BLOCK: null,
@@ -129,8 +128,6 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
 }
 
 async function renderMainPage(slug: string[] | undefined) {
-  "use cache";
-
   const match = await getMatchingPage(slug);
   if (!match) return notFound();
   const { page, params: resolvedParams } = match;
@@ -181,39 +178,8 @@ async function renderMainPage(slug: string[] | undefined) {
       : undefined,
   });
 
-  cacheTag(
-    `pages/${page.id}`,
-    "config/site.url",
-    "config/site.title",
-    "config/seo.description",
-    "config/author.name",
-    "config/site.avatar",
-    "config/seo.index.enable",
-  );
-  if (isHomePage) {
-    cacheTag("posts/list", "menus");
-  }
-  cacheLife("max");
-
   if (page.contentType === "BLOCK") {
     const config = getSystemPageConfig(page) as PageConfig;
-    const blockInputs = (
-      config &&
-      typeof config === "object" &&
-      "blocks" in config &&
-      Array.isArray((config as { blocks?: unknown }).blocks)
-        ? ((config as { blocks?: RuntimeBlockInput[] }).blocks ?? [])
-        : []
-    ) as RuntimeBlockInput[];
-    const pageTags = buildPageCacheTagsForBlocks({
-      pageId: page.id,
-      blocks: blockInputs,
-      pageContext: resolvedParams,
-    });
-
-    if (pageTags.length > 0) {
-      cacheTag(...pageTags);
-    }
 
     const { blocks = [] } =
       (await resolveBlockData(config, resolvedParams, {

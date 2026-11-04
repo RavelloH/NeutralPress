@@ -32,13 +32,13 @@ import {
   UpdateUserProfileSchema,
   UpdateUsersSchema,
 } from "@repo/shared-types/api/user";
-import { updateTag } from "next/cache";
 import { cookies, headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { calculateMD5 } from "@/lib/server/crypto";
+import { expireCacheTag as updateTag } from "@/lib/server/isr-invalidation";
 import { type AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
 import { hashPassword } from "@/lib/server/password";
 import prisma from "@/lib/server/prisma";

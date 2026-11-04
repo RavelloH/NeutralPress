@@ -1,6 +1,5 @@
 import { md5 } from "js-md5";
 import type { Metadata } from "next";
-import { cacheLife, cacheTag } from "next/cache";
 import { notFound } from "next/navigation";
 
 import PhotoDetailClient from "@/app/(build-in)/gallery/photo/[slug]/PhotoDetailClient";
@@ -17,6 +16,8 @@ import {
 interface PhotoPageProps {
   params: Promise<{ slug: string }>;
 }
+
+export const revalidate = false;
 
 export async function generateMetadata({
   params,
@@ -111,8 +112,6 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
 }
 
 async function renderPhotoPage(slug: string) {
-  "use cache";
-
   if (!slug) {
     notFound();
   }
@@ -140,18 +139,6 @@ async function renderPhotoPage(slug: string) {
   if (!photo) {
     notFound();
   }
-
-  cacheTag(
-    `photos/${slug}`,
-    `users/${photo.media.user.uid}`,
-    "config/site.url",
-    "config/site.title",
-    "config/seo.description",
-    "config/author.name",
-    "config/site.avatar",
-    "config/seo.index.enable",
-  );
-  cacheLife("max");
 
   // 计算用户邮箱的 MD5 值
   const emailMd5 = photo.media.user.email

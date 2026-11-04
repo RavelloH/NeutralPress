@@ -1,7 +1,9 @@
 import { Feed } from "feed";
-import { cacheLife, cacheTag } from "next/cache";
 
 import { getFeedData } from "@/lib/server/feed-data";
+
+export const dynamic = "force-static";
+export const revalidate = false;
 
 const FEED_XSL_PATH = "/feed.xsl";
 const PREVIEW_MAX_LENGTH = 220;
@@ -59,10 +61,6 @@ function injectFeedStylesheet(xml: string): string {
 }
 
 async function generateRssFeed(): Promise<string | null> {
-  "use cache";
-  cacheTag("posts/list", "config");
-  cacheLife("max");
-
   const { posts, siteConfig, rssConfig } = await getFeedData();
 
   if (!rssConfig.enabled) {

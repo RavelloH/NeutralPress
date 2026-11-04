@@ -194,7 +194,7 @@ export async function getPublishedProjectSeo(
     },
     [`published-project-seo-${slug}`],
     {
-      tags: ["projects/list"],
+      tags: ["projects/list", `projects/${slug}`],
       revalidate: false,
     },
   );

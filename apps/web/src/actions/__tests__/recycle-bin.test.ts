@@ -73,6 +73,7 @@ vi.mock("@/lib/server/audit", () => ({
 vi.mock("next/cache", () => ({
   updateTag: vi.fn(),
 }));
+vi.mock("@/lib/server/isr-invalidation", () => ({ expireCacheTag: vi.fn() }));
 
 // ============ Tests ============
 

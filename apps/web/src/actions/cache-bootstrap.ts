@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 
 import { authVerify } from "@/lib/server/auth-verify";
@@ -27,7 +27,7 @@ export async function refreshBootstrapCaches(): Promise<BootstrapCacheRefreshRes
 
   const tags = await collectBootstrapTags();
   for (const tag of tags) {
-    updateTag(tag);
+    revalidateTag(tag, { expire: 0 });
   }
 
   const pathTargets = getCriticalRevalidatePathTargets();

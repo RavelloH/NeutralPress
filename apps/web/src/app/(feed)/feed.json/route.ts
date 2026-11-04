@@ -1,5 +1,3 @@
-import { cacheLife, cacheTag } from "next/cache";
-
 import { getFeedData } from "@/lib/server/feed-data";
 
 interface JsonFeedItem {
@@ -28,11 +26,10 @@ interface JsonFeed {
   items: JsonFeedItem[];
 }
 
-async function generateJsonFeed(): Promise<JsonFeed | null> {
-  "use cache";
-  cacheTag("posts/list", "config");
-  cacheLife("max");
+export const dynamic = "force-static";
+export const revalidate = false;
 
+async function generateJsonFeed(): Promise<JsonFeed | null> {
   const { posts, siteConfig, rssConfig } = await getFeedData();
 
   if (!rssConfig.enabled) {

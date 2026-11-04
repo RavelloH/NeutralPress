@@ -1,7 +1,5 @@
 import "server-only";
 
-import { cacheLife, cacheTag } from "next/cache";
-
 import { getBlockDefinition } from "@/blocks/core/catalog";
 import type {
   BlockRuntimeContext,
@@ -313,18 +311,6 @@ async function resolveSingleBlockCached(params: {
   pageId: string;
   pageContext?: BlockPageContext;
 }): Promise<ResolvedBlock> {
-  "use cache";
-
-  const tags = getBlockCacheTags({
-    block: params.block,
-    pageId: params.pageId,
-    pageContext: params.pageContext,
-  });
-  if (tags.length > 0) {
-    cacheTag(...tags);
-  }
-  cacheLife("max");
-
   return resolveSingleBlock(params.block, params.pageContext);
 }
 

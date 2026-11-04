@@ -30,7 +30,6 @@ import {
   UpdateProjectSchema,
   UpdateProjectsSchema,
 } from "@repo/shared-types/api/project";
-import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
@@ -39,6 +38,7 @@ import { authVerify } from "@/lib/server/auth-verify";
 import { getConfig } from "@/lib/server/config-cache";
 import { runProjectsGithubSync } from "@/lib/server/cron-task-runner";
 import { generateSignature } from "@/lib/server/image-crypto";
+import { expireCacheTag as updateTag } from "@/lib/server/isr-invalidation";
 import {
   findMediaIdByUrl,
   getAllFeaturedImageUrls,

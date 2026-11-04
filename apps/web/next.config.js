@@ -236,7 +236,7 @@ const nextConfig = () => {
     output: globalThis.process.env.BUILD_STANDALONE ? "standalone" : undefined,
     outputFileTracingRoot: repoRootDir,
     serverExternalPackages,
-    cacheComponents: true,
+    // Traditional on-demand ISR: no PPR / Cache Components.
     reactCompiler: true,
     outputFileTracingIncludes: {
       "/api/**/*": tracingIncludes,

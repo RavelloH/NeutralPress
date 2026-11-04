@@ -40,13 +40,13 @@ import {
   IndexPostsSchema,
   TestTokenizeSchema,
 } from "@repo/shared-types/api/search";
-import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { resolveIpLocation } from "@/lib/server/ip-utils";
+import { expireCacheTag as updateTag } from "@/lib/server/isr-invalidation";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";

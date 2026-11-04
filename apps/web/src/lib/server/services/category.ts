@@ -31,7 +31,6 @@ import type {
   ApiResponse,
   ApiResponseData,
 } from "@repo/shared-types/api/common";
-import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
@@ -50,6 +49,7 @@ import {
   getCategoryPath,
   validateCategoryMove,
 } from "@/lib/server/category-utils";
+import { expireCacheTag as updateTag } from "@/lib/server/isr-invalidation";
 import {
   findMediaIdByUrl,
   getFeaturedImageUrl,

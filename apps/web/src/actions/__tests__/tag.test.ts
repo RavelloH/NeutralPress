@@ -74,6 +74,9 @@ vi.mock("@/lib/server/media-reference", () => ({
 }));
 vi.mock("next/headers", () => ({ headers: mockHeaders }));
 vi.mock("next/cache", () => ({ updateTag: mockUpdateTag }));
+vi.mock("@/lib/server/isr-invalidation", () => ({
+  expireCacheTag: mockUpdateTag,
+}));
 vi.mock("next/server", () => ({
   NextResponse: { json: vi.fn() },
   after: vi.fn((fn: () => Promise<void>) => fn()),

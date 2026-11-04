@@ -1,5 +1,3 @@
-import { cacheLife, cacheTag } from "next/cache";
-
 import ProjectPaperModal from "@/app/@modal/(.)projects/[slug]/ProjectPaperModal";
 import PostToc from "@/components/client/features/posts/PostToc";
 import {
@@ -21,23 +19,10 @@ export default async function ProjectDetailModalPage({
 }
 
 async function renderProjectDetailModalPage(slug: string) {
-  "use cache";
   const [{ project, mediaFileMap }, [siteURL, shikiTheme]] = await Promise.all([
     getPublishedProjectDetail(slug),
     getConfigs(["site.url", "site.shiki.theme"]),
   ]);
-
-  const pageCacheTags = new Set<string>([
-    "config/site.url",
-    "config/site.shiki.theme",
-    `projects/${project.slug}`,
-    `users/${project.author.uid}`,
-  ]);
-  for (const tag of project.tags) {
-    pageCacheTags.add(`tags/${tag.slug}`);
-  }
-  cacheTag(...Array.from(pageCacheTags));
-  cacheLife("max");
 
   const contentRootId = `project-modal-article-content-${project.id}`;
   const contentSelector = `#${contentRootId}`;

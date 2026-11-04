@@ -24,7 +24,6 @@ import {
   UpdatePageSchema,
   UpdatePagesSchema,
 } from "@repo/shared-types/api/page";
-import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
@@ -35,6 +34,7 @@ import type {
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { normalizeBlockIds } from "@/lib/server/block-normalize";
+import { expireCacheTag as updateTag } from "@/lib/server/isr-invalidation";
 import { updatePageMediaReferences } from "@/lib/server/page-image-tracking";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";

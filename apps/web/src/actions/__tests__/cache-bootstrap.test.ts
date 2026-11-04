@@ -25,6 +25,7 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
   updateTag: vi.fn(),
 }));
+vi.mock("@/lib/server/isr-invalidation", () => ({ expireCacheTag: vi.fn() }));
 
 // ── Imports ──────────────────────────────────────────────────────────────────
 

@@ -82,6 +82,7 @@ vi.mock("@/lib/shared/cache-bootstrap-auth", () => ({
 vi.mock("next/cache", () => ({
   updateTag: vi.fn(),
 }));
+vi.mock("@/lib/server/isr-invalidation", () => ({ expireCacheTag: vi.fn() }));
 
 vi.mock("next/server", () => ({
   after: vi.fn((fn: () => void) => fn()),

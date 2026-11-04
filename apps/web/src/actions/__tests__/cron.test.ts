@@ -69,6 +69,7 @@ vi.mock("@/lib/server/config-cache", () => ({
 vi.mock("next/cache", () => ({
   updateTag: vi.fn(),
 }));
+vi.mock("@/lib/server/isr-invalidation", () => ({ expireCacheTag: vi.fn() }));
 
 vi.mock("@/lib/server/cron-task-runner", () => ({
   runDoctorForCron: vi.fn(async () => ({

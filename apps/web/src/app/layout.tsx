@@ -3,7 +3,6 @@ import "server-only";
 
 import { Suspense } from "react";
 import type { Viewport } from "next";
-import { cacheLife, cacheTag } from "next/cache";
 // Fonts
 import { Inter } from "next/font/google";
 import { IBM_Plex_Mono } from "next/font/google";
@@ -69,28 +68,6 @@ export default async function RootLayout({
   children: React.ReactNode;
   modal: React.ReactNode;
 }>) {
-  "use cache";
-  cacheTag(
-    "menus",
-    "config/site.color",
-    "config/site.font.scalePercent",
-    "config/site.title",
-    "config/site.slogan.secondary",
-    "config/site.avatar",
-    "config/site.custom.script",
-    "config/site.birthday",
-    "config/site.copyright",
-    "config/author.name",
-    "config/analytics.enable",
-    "config/notice.ably.key",
-    "config/site.shiki.theme",
-    "config/media.customLoader",
-    "config/user.sso.google.enabled",
-    "config/user.sso.github.enabled",
-    "config/user.sso.microsoft.enabled",
-  );
-  cacheLife("max");
-
   // 获取所有需要的配置
   const [
     menus,

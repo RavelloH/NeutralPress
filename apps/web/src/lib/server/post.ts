@@ -231,7 +231,7 @@ export async function getPublishedPost(slug: string): Promise<FullPostData> {
     },
     [`public-post-${slug}`],
     {
-      tags: ["posts/list"],
+      tags: ["posts/list", `posts/${slug}`],
       revalidate: false,
     },
   );

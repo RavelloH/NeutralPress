@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { cacheLife, cacheTag } from "next/cache";
 
 import PostToc from "@/components/client/features/posts/PostToc";
 import MainLayout from "@/components/client/layout/MainLayout";
@@ -23,6 +22,8 @@ import {
 interface ProjectDetailPageProps {
   params: Promise<{ slug: string }>;
 }
+
+export const revalidate = false;
 
 const PREBUILD_PROJECT_LIMIT = 8;
 
@@ -74,28 +75,10 @@ export default async function ProjectDetailPage({
 }
 
 async function renderProjectDetailPage(slug: string) {
-  "use cache";
   const [{ project, mediaFileMap }, [siteURL, shikiTheme]] = await Promise.all([
     getPublishedProjectDetail(slug),
     getConfigs(["site.url", "site.shiki.theme"]),
   ]);
-
-  const pageCacheTags = new Set<string>([
-    "config/site.url",
-    "config/site.title",
-    "config/seo.description",
-    "config/author.name",
-    "config/site.avatar",
-    "config/seo.index.enable",
-    "config/site.shiki.theme",
-    `projects/${project.slug}`,
-    `users/${project.author.uid}`,
-  ]);
-  for (const tag of project.tags) {
-    pageCacheTags.add(`tags/${tag.slug}`);
-  }
-  cacheTag(...Array.from(pageCacheTags));
-  cacheLife("max");
 
   const contentRootId = "project-detail-article-content";
   const contentSelector = `#${contentRootId}`;

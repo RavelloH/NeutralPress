@@ -21,7 +21,6 @@ import {
   TriggerCronSchema,
   UpdateCronConfigSchema,
 } from "@repo/shared-types/api/cron";
-import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
@@ -36,6 +35,7 @@ import {
   runFriendLinksCheckForCron,
   runProjectsSyncForCron,
 } from "@/lib/server/cron-task-runner";
+import { expireCacheTag as updateTag } from "@/lib/server/isr-invalidation";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";

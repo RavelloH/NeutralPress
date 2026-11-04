@@ -12,6 +12,7 @@ vi.mock("next/headers", () => ({
 vi.mock("next/cache", () => ({
   updateTag: vi.fn(),
 }));
+vi.mock("@/lib/server/isr-invalidation", () => ({ expireCacheTag: vi.fn() }));
 
 // Mock next/server
 vi.mock("next/server", () => ({

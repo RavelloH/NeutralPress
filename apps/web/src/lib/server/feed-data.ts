@@ -1,4 +1,3 @@
-import { cacheLife, cacheTag } from "next/cache";
 import rehypeStringify from "rehype-stringify";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
@@ -142,10 +141,6 @@ export function prependFeedLead(content: string, postUrl: string): string {
 }
 
 export async function getFeedData(): Promise<FeedData> {
-  "use cache";
-  cacheTag("posts/list", "config");
-  cacheLife("max");
-
   const [
     urlConfig,
     titleConfig,

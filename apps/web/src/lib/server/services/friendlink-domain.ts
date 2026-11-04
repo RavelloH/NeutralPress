@@ -52,7 +52,6 @@ import {
   UpdateFriendLinkByAdminSchema,
   UpdateOwnFriendLinkSchema,
 } from "@repo/shared-types/api/friendlink";
-import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
@@ -62,6 +61,7 @@ import { authVerify } from "@/lib/server/auth-verify";
 import { verifyToken } from "@/lib/server/captcha";
 import { getConfig, getConfigs } from "@/lib/server/config-cache";
 import { runFriendLinksCheck } from "@/lib/server/cron-task-runner";
+import { expireCacheTag as updateTag } from "@/lib/server/isr-invalidation";
 import { sendNotice } from "@/lib/server/notice";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";

@@ -9,7 +9,6 @@ import {
   RiText,
   RiUserLine,
 } from "@remixicon/react";
-import { cacheLife, cacheTag } from "next/cache";
 import { notFound } from "next/navigation";
 
 import ProtectedPostContentClient from "@/app/(build-in)/posts/[slug]/ProtectedPostContentClient";
@@ -59,6 +58,8 @@ import {
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
+
+export const revalidate = false;
 
 const PREBUILD_POST_LIMIT = 12;
 
@@ -385,8 +386,6 @@ function renderPostSupplementarySections(params: {
 }
 
 async function renderProtectedPostPage(slug: string) {
-  "use cache";
-
   let post,
     categoryPath,
     categorySlugPath,
@@ -484,35 +483,6 @@ async function renderProtectedPostPage(slug: string) {
     post.publishedAt || post.createdAt,
   ).toISOString();
   const updatedDisplayDate = new Date(post.updatedAt).toISOString();
-
-  const pageCacheTags = new Set<string>([
-    "config/comment.enable",
-    "config/comment.placeholder",
-    "config/comment.anonymous.enable",
-    "config/comment.anonymous.email.required",
-    "config/comment.anonymous.website.enable",
-    "config/comment.review.enable",
-    "config/comment.anonymous.review.enable",
-    "config/comment.locate.enable",
-    "config/site.url",
-    "config/content.license.default",
-    "config/content.license.textTemplate",
-    "posts/list",
-    `posts/${slug}`,
-    `users/${post.author.uid}`,
-  ]);
-  if (adjacentPosts.previous?.slug) {
-    pageCacheTags.add(`posts/${adjacentPosts.previous.slug}`);
-  }
-  if (adjacentPosts.next?.slug) {
-    pageCacheTags.add(`posts/${adjacentPosts.next.slug}`);
-  }
-  for (const tag of post.tags) {
-    pageCacheTags.add(`tags/${tag.slug}`);
-  }
-
-  cacheTag(...Array.from(pageCacheTags));
-  cacheLife("max");
 
   const horizontalPaddingClassName = "px-6 md:px-10";
   const featuredHeroHeightClassName = "h-[42.1em]";
@@ -680,8 +650,6 @@ async function renderProtectedPostPage(slug: string) {
 }
 
 async function renderPostPage(slug: string) {
-  "use cache";
-
   let post,
     renderedContent,
     categoryPath,
@@ -838,41 +806,6 @@ async function renderPostPage(slug: string) {
     },
   });
 
-  const pageCacheTags = new Set<string>([
-    "config/site.url",
-    "config/site.title",
-    "config/seo.description",
-    "config/author.name",
-    "config/site.avatar",
-    "config/seo.index.enable",
-    "config/comment.enable",
-    "config/comment.placeholder",
-    "config/comment.anonymous.enable",
-    "config/comment.anonymous.email.required",
-    "config/comment.anonymous.website.enable",
-    "config/comment.review.enable",
-    "config/comment.anonymous.review.enable",
-    "config/comment.locate.enable",
-    "config/site.shiki.theme",
-    "config/content.license.default",
-    "config/content.license.textTemplate",
-    "posts/list",
-    `posts/${slug}`,
-    `users/${post.author.uid}`,
-  ]);
-  if (adjacentPosts.previous?.slug) {
-    pageCacheTags.add(`posts/${adjacentPosts.previous.slug}`);
-  }
-  if (adjacentPosts.next?.slug) {
-    pageCacheTags.add(`posts/${adjacentPosts.next.slug}`);
-  }
-
-  for (const tag of post.tags) {
-    pageCacheTags.add(`tags/${tag.slug}`);
-  }
-
-  cacheTag(...Array.from(pageCacheTags));
-  cacheLife("max");
   const horizontalPaddingClassName = "px-6 md:px-10";
   const featuredHeroHeightClassName = "h-[42.1em]";
   const articleContentId = "post-detail-article-content";

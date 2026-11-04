@@ -50,6 +50,9 @@ vi.mock("@/lib/server/rate-limit", () => ({ default: mockLimitControl }));
 vi.mock("@/lib/server/validator", () => ({ validateData: mockValidateData }));
 vi.mock("next/headers", () => ({ headers: mockHeaders }));
 vi.mock("next/cache", () => ({ updateTag: mockUpdateTag }));
+vi.mock("@/lib/server/isr-invalidation", () => ({
+  expireCacheTag: mockUpdateTag,
+}));
 vi.mock("next/server", () => ({
   NextResponse: { json: vi.fn() },
   after: vi.fn((fn: () => Promise<void>) => fn()),

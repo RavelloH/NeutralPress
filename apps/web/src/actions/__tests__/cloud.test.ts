@@ -75,6 +75,7 @@ vi.mock("@/lib/server/config-cache", () => ({
 vi.mock("next/cache", () => ({
   updateTag: vi.fn(),
 }));
+vi.mock("@/lib/server/isr-invalidation", () => ({ expireCacheTag: vi.fn() }));
 
 vi.mock("node:child_process", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:child_process")>();

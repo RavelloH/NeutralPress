@@ -46,7 +46,6 @@ import {
   UpdatePostSchema,
   UpdatePostsSchema,
 } from "@repo/shared-types/api/post";
-import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 import { TextVersion } from "text-version";
@@ -56,6 +55,7 @@ import { authVerify } from "@/lib/server/auth-verify";
 import { verifyToken } from "@/lib/server/captcha";
 import { getConfig } from "@/lib/server/config-cache";
 import { generateSignature } from "@/lib/server/image-crypto";
+import { expireCacheTag as updateTag } from "@/lib/server/isr-invalidation";
 import {
   findMediaIdByUrl,
   getFeaturedImageUrl,

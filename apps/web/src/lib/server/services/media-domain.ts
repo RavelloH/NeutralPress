@@ -28,7 +28,6 @@ import {
   GetMediaTrendsSchema,
   UpdateMediaSchema,
 } from "@repo/shared-types/api/media";
-import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
@@ -38,6 +37,7 @@ import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { generateCacheKey, getCache, setCache } from "@/lib/server/cache";
 import { generateSignedImageId } from "@/lib/server/image-crypto";
+import { expireCacheTag as updateTag } from "@/lib/server/isr-invalidation";
 import { getGalleryPhotosData } from "@/lib/server/media";
 import { deleteObject } from "@/lib/server/oss";
 import prisma from "@/lib/server/prisma";

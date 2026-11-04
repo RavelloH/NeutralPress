@@ -64,6 +64,7 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
   updateTag: vi.fn(),
 }));
+vi.mock("@/lib/server/isr-invalidation", () => ({ expireCacheTag: vi.fn() }));
 
 vi.mock("@/lib/server/cache-bootstrap-targets", () => ({
   collectBootstrapTags: vi.fn(async () => []),
