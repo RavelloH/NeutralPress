@@ -274,8 +274,20 @@ const nextConfig = () => {
       ];
     },
     // 配置缓存头
+    // Only known public HTML routes receive a Cloudflare-specific CDN policy.
+    // This never applies to protected posts, user pages, routes or APIs.
     async headers() {
       return [
+        ...["/", "/posts", "/projects", "/gallery"].map((source) => ({
+          source,
+          headers: [
+            {
+              key: "Cloudflare-CDN-Cache-Control",
+              value:
+                "public, max-age=60, stale-while-revalidate=60, stale-if-error=60",
+            },
+          ],
+        })),
         {
           source: "/favicon.ico",
           headers: [

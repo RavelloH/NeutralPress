@@ -19,6 +19,11 @@ interface PhotoPageProps {
 
 export const revalidate = false;
 
+// New photo slugs are prerendered on their first anonymous request.
+export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
+  return [];
+}
+
 export async function generateMetadata({
   params,
 }: PhotoPageProps): Promise<Metadata> {

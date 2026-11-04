@@ -6,6 +6,10 @@ const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
 }));
 vi.mock("next/cache", () => mocks);
+const scheduleCdnMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/server/cdn-cache-pipeline", () => ({
+  scheduleCdnCacheRefresh: scheduleCdnMock,
+}));
 
 import { expireCacheTag } from "@/lib/server/isr-invalidation";
 
@@ -14,6 +18,7 @@ describe("event-driven ISR invalidation", () => {
 
   it("expires post lists immediately and refreshes dependent static pages and feeds", () => {
     expireCacheTag("posts/list");
+    expect(scheduleCdnMock).toHaveBeenCalledWith(["/", "/posts"]);
     expect(mocks.revalidateTag).toHaveBeenCalledWith("posts/list", {
       expire: 0,
     });
@@ -39,6 +44,7 @@ describe("event-driven ISR invalidation", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/projects/demo");
     vi.clearAllMocks();
     expireCacheTag("projects/list");
+    expect(scheduleCdnMock).toHaveBeenCalledWith(["/", "/projects"]);
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/projects", "page");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/[[...slug]]", "page");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/sitemap.xml");
@@ -71,6 +77,7 @@ describe("event-driven ISR invalidation", () => {
       expire: 0,
     });
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    expect(scheduleCdnMock).not.toHaveBeenCalled();
   });
 
   it("refreshes configurable homepage blocks for gallery and friend-link changes", () => {

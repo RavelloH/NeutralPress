@@ -141,5 +141,9 @@
       "outputs": [".next/**", "!.next/cache/**", "out/**"],
       "env": ["NODE_ENV"]
     }
-  }
+  },
+  "globalPassThroughEnv": [
+    "CLOUDFLARE_CACHE_ZONE_ID",
+    "CLOUDFLARE_CACHE_PURGE_TOKEN"
+  ]
 }

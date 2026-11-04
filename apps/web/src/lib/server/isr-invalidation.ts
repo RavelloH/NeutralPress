@@ -2,6 +2,8 @@ import "server-only";
 
 import { revalidatePath, revalidateTag } from "next/cache";
 
+import { scheduleCdnCacheRefresh } from "@/lib/server/cdn-cache-pipeline";
+
 /**
  * Immediately expire public Data Cache entries and the affected Full Route Cache.
  *
@@ -47,5 +49,27 @@ export function expireCacheTag(tag: string): void {
     revalidatePath("/[[...slug]]", "page");
   } else if (tag === "users" || tag.startsWith("users/")) {
     revalidatePath("/", "layout");
+  }
+
+  // The CDN is deliberately more restrictive than the ISR cache.
+  if (tag === "posts/list") {
+    scheduleCdnCacheRefresh(["/", "/posts"]);
+  } else if (tag === "projects/list") {
+    scheduleCdnCacheRefresh(["/", "/projects"]);
+  } else if (
+    tag === "gallery/list" ||
+    tag === "friend-links" ||
+    tag === "pages" ||
+    tag.startsWith("pages/")
+  ) {
+    scheduleCdnCacheRefresh(["/", "/gallery"]);
+  } else if (
+    tag === "menus" ||
+    tag === "config" ||
+    tag.startsWith("config/") ||
+    tag === "users" ||
+    tag.startsWith("users/")
+  ) {
+    scheduleCdnCacheRefresh(["/", "/posts", "/projects", "/gallery"]);
   }
 }
