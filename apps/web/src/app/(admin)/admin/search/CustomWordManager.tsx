@@ -5,13 +5,9 @@ import { RiBook2Line, RiBookLine, RiCloseLine } from "@remixicon/react";
 import type { CustomWordItem } from "@repo/shared-types/api/search";
 import { AnimatePresence, motion } from "framer-motion";
 
-import {
-  addCustomWord,
-  deleteCustomWord,
-  getCustomWords,
-  indexPosts,
-} from "@/actions/search";
+import { addCustomWord, deleteCustomWord, indexPosts } from "@/actions/search";
 import { GridItem } from "@/components/client/layout/RowGrid";
+import { getCustomWords } from "@/lib/client/api/search-admin-read";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
@@ -40,7 +36,7 @@ export default function CustomWordManager() {
   const loadWords = async () => {
     setLoadingWords(true);
     try {
-      const result = await getCustomWords({});
+      const result = await getCustomWords();
       if (result.success && result.data) {
         setWords(result.data);
       }

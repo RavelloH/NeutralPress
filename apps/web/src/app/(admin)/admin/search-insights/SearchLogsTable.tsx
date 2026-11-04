@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { RiEyeLine } from "@remixicon/react";
 import type { SearchLogItem } from "@repo/shared-types/api/search";
 
-import { getSearchLogs } from "@/actions/search";
 import type { FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getSearchLogs } from "@/lib/client/api/search-admin-read";
 import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import type { TableColumn } from "@/ui/Table";

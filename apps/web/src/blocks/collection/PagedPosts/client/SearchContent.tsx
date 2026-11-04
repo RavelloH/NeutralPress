@@ -3,13 +3,13 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { RiGhostLine } from "@remixicon/react";
 
-import { searchPosts } from "@/actions/search";
 import HighlightedText from "@/components/client/HighlightedText";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import ViewCountBatchLoader from "@/components/client/logic/ViewCountBatchLoader";
 import EmptyPostCard from "@/components/server/features/posts/EmptyPostCard";
 import PostCard from "@/components/server/features/posts/PostCard";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { searchPosts } from "@/lib/client/api/search-posts-read";
 import { createArray } from "@/lib/client/create-array";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

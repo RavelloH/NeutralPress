@@ -14,16 +14,15 @@ import type {
   PostTokenDetails,
 } from "@repo/shared-types/api/search";
 
-import {
-  deleteIndex,
-  getIndexStatus,
-  getPostTokenDetails,
-  indexPosts,
-} from "@/actions/search";
+import { deleteIndex, indexPosts } from "@/actions/search";
 import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import Link from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import {
+  getIndexStatus,
+  getPostTokenDetails,
+} from "@/lib/client/api/search-admin-read";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
