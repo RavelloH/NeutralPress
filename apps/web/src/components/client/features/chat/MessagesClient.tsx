@@ -16,6 +16,7 @@ import { useBroadcast } from "@/hooks/use-broadcast";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { useMessagePolling } from "@/hooks/use-message-polling";
 import { useMobile } from "@/hooks/use-mobile";
+import { getConversations, searchUsers } from "@/lib/client/api/message-read";
 import { AutoTransition } from "@/ui/AutoTransition";
 
 const MOBILE_CHAT_HISTORY_STATE_KEY = "neutralPressMessagesMobileChat";
@@ -468,7 +469,6 @@ export default function MessagesClient({
       // 加载目标用户信息
       setIsLoadingTargetUser(true);
       try {
-        const { searchUsers } = await import("@/actions/message");
         const result = await searchUsers(uid.toString());
 
         if (result.success && result.data && result.data.users.length > 0) {
@@ -609,7 +609,6 @@ export default function MessagesClient({
       const actualSkip = temporaryTargetUser ? skip - 1 : skip;
       if (actualSkip < 0) return; // 防止负数
 
-      const { getConversations } = await import("@/actions/message");
       const result = await getConversations(undefined, actualSkip, 20);
 
       if (result.success && result.data) {

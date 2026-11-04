@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { RiSearchLine } from "@remixicon/react";
 
-import { testTokenize } from "@/actions/search";
 import { GridItem } from "@/components/client/layout/RowGrid";
+import { testTokenize } from "@/lib/client/api/search-admin-read";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";

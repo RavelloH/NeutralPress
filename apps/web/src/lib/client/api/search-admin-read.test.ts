@@ -5,6 +5,7 @@ import {
   getIndexStatus,
   getPostTokenDetails,
   getSearchLogs,
+  testTokenize,
 } from "@/lib/client/api/search-admin-read";
 
 describe("Search administrator native JSON POST clients", () => {
@@ -26,11 +27,13 @@ describe("Search administrator native JSON POST clients", () => {
       sortOrder: "desc",
       query: "private search phrase",
     });
+    await testTokenize({ text: "测试文本" });
     expect(spy.mock.calls.map(([url]) => url)).toEqual([
       "/api/public/admin/search/words",
       "/api/public/admin/search/index-status",
       "/api/public/admin/search/tokens",
       "/api/public/admin/search/logs",
+      "/api/public/admin/search/test-tokenize",
     ]);
     for (const [, opts] of spy.mock.calls) {
       expect(opts).toEqual(
@@ -43,6 +46,7 @@ describe("Search administrator native JSON POST clients", () => {
     }
     expect(spy.mock.calls[2]![1].body).toContain("draft-private-slug");
     expect(spy.mock.calls[3]![1].body).toContain("private search phrase");
+    expect(spy.mock.calls[4]![1].body).toContain("测试文本");
   });
 
   it("keeps unauthorized results and raises server failures", async () => {

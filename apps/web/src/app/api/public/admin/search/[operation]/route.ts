@@ -3,6 +3,7 @@ import {
   GetIndexStatusSchema,
   GetPostTokenDetailsSchema,
   GetSearchLogsSchema,
+  TestTokenizeSchema,
 } from "@repo/shared-types/api/search";
 import type { NextRequest, NextResponse } from "next/server";
 
@@ -16,7 +17,13 @@ const PRIVATE_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none';",
 };
-const operations = new Set(["words", "index-status", "tokens", "logs"]);
+const operations = new Set([
+  "words",
+  "index-status",
+  "tokens",
+  "logs",
+  "test-tokenize",
+]);
 function invalid(): NextResponse {
   return Response.json(
     {
@@ -37,7 +44,10 @@ export async function POST(
   if (!operations.has(operation)) return invalid();
   if (request.nextUrl.search) return invalid();
 
-  const parsedBody = await parseSameOriginJson(request, 8192);
+  const parsedBody = await parseSameOriginJson(
+    request,
+    operation === "test-tokenize" ? 12_288 : 8192,
+  );
   if (!parsedBody.ok) return parsedBody.response;
   const input = parsedBody.input;
 
@@ -66,7 +76,7 @@ export async function POST(
     result = await service.getPostTokenDetails(parsed.data, {
       environment: "serverless",
     });
-  } else {
+  } else if (operation === "logs") {
     const parsed = GetSearchLogsSchema.omit({ access_token: true })
       .strict()
       .safeParse(input);
@@ -77,6 +87,14 @@ export async function POST(
     )
       return invalid();
     result = await service.getSearchLogs(parsed.data, {
+      environment: "serverless",
+    });
+  } else {
+    const parsed = TestTokenizeSchema.omit({ access_token: true })
+      .strict()
+      .safeParse(input);
+    if (!parsed.success) return invalid();
+    result = await service.testTokenize(parsed.data, {
       environment: "serverless",
     });
   }

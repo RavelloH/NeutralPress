@@ -10,11 +10,13 @@ import type {
   IndexStatusItem,
   PostTokenDetails,
   SearchLogItem,
+  TestTokenize,
+  TestTokenizeResult,
 } from "@repo/shared-types/api/search";
 
 /** Keep private filters and search terms in an authenticated same-origin JSON body. */
 async function adminSearchPost<T extends ApiResponseData>(
-  operation: "words" | "index-status" | "tokens" | "logs",
+  operation: "words" | "index-status" | "tokens" | "logs" | "test-tokenize",
   params: object,
   signal?: AbortSignal,
 ): Promise<ApiResponse<T>> {
@@ -28,6 +30,13 @@ async function adminSearchPost<T extends ApiResponseData>(
   });
   if (response.status >= 500) throw new Error("获取搜索管理数据失败");
   return (await response.json()) as ApiResponse<T>;
+}
+
+export function testTokenize(
+  params: Omit<TestTokenize, "access_token">,
+  signal?: AbortSignal,
+): Promise<ApiResponse<TestTokenizeResult | null>> {
+  return adminSearchPost("test-tokenize", params, signal);
 }
 
 export function getCustomWords(

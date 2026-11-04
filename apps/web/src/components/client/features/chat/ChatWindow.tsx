@@ -18,6 +18,7 @@ import Link from "@/components/ui/Link";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { useOptimisticMessages } from "@/hooks/use-optimistic-messages";
+import { getConversationMessages } from "@/lib/client/api/message-read";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
@@ -218,7 +219,6 @@ export default function ChatWindow({
 
       try {
         setIsLoadingMessages(true);
-        const { getConversationMessages } = await import("@/actions/message");
         const result = await getConversationMessages(conversationId, 0, 25);
 
         if (result.success && result.data) {
@@ -275,7 +275,6 @@ export default function ChatWindow({
     if (!conversationId) return false;
 
     try {
-      const { getConversationMessages } = await import("@/actions/message");
       const result = await getConversationMessages(conversationId, skip, 25);
 
       if (result.success && result.data) {

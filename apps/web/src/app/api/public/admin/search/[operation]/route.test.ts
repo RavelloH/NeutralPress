@@ -10,6 +10,7 @@ vi.mock("@/lib/server/services/search-admin-domain", () => ({
   getIndexStatus: vi.fn(),
   getPostTokenDetails: vi.fn(),
   getSearchLogs: vi.fn(),
+  testTokenize: vi.fn(),
 }));
 
 const ctx = (operation: string) => ({ params: Promise.resolve({ operation }) });
@@ -37,7 +38,6 @@ describe("Admin search management native JSON POST", () => {
       "deleteIndex",
       "addCustomWord",
       "deleteCustomWord",
-      "testTokenize",
     ]) {
       expect((await POST(request(op), ctx(op))).status).toBe(400);
     }
@@ -57,6 +57,31 @@ describe("Admin search management native JSON POST", () => {
       (await POST(request("words", { access_token: "secret" }), ctx("words")))
         .status,
     ).toBe(400);
+    expect(
+      (await POST(request("test-tokenize", { text: "" }), ctx("test-tokenize")))
+        .status,
+    ).toBe(400);
+    expect(
+      (
+        await POST(
+          request("test-tokenize", { text: "x".repeat(10001) }),
+          ctx("test-tokenize"),
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await POST(
+          request(
+            "test-tokenize",
+            { text: "private" },
+            { origin: "https://attacker.example" },
+          ),
+          ctx("test-tokenize"),
+        )
+      ).status,
+    ).toBe(403);
+    expect(service.testTokenize).not.toHaveBeenCalled();
     expect(
       (await POST(request("words", { extra: "bad" }), ctx("words"))).status,
     ).toBe(400);
@@ -142,6 +167,33 @@ describe("Admin search management native JSON POST", () => {
     );
     expect(service.getSearchLogs).toHaveBeenCalledWith(
       expect.objectContaining({ query: "private search term" }),
+      { environment: "serverless" },
+    );
+  });
+
+  it("routes tokenizer diagnostics through the private ADMIN/EDITOR service", async () => {
+    vi.mocked(service.testTokenize).mockResolvedValueOnce(
+      NextResponse.json({
+        success: true,
+        data: {
+          text: "测试文本",
+          tokens: ["测试", "文本"],
+          count: 2,
+          duration: 10,
+        },
+      }) as never,
+    );
+    const result = await POST(
+      request("test-tokenize", { text: "测试文本" }),
+      ctx("test-tokenize"),
+    );
+    expect(result.status).toBe(200);
+    expect(result.headers.get("cache-control")).toBe("private, no-store");
+    expect(result.headers.get("content-security-policy")).toContain(
+      "default-src 'none'",
+    );
+    expect(service.testTokenize).toHaveBeenCalledWith(
+      { text: "测试文本" },
       { environment: "serverless" },
     );
   });
