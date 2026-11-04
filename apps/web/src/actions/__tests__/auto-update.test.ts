@@ -436,7 +436,7 @@ describe("auto-update actions", () => {
   });
 
   describe("getRuntimeVersionInfo 分支", () => {
-    it("数据库错误时返回失败", async () => {
+    it("运行时版本信息不依赖数据库读取", async () => {
       setupSuccessMocks();
       vi.mocked(prisma.config.findMany).mockRejectedValue(
         new Error("DB error"),
@@ -447,7 +447,8 @@ describe("auto-update actions", () => {
         access_token: "valid-token",
       });
 
-      expect(result).toEqual(expect.objectContaining({ success: false }));
+      expect(result).toEqual(expect.objectContaining({ success: true }));
+      expect(prisma.config.findMany).not.toHaveBeenCalled();
     });
   });
 });

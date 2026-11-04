@@ -7,14 +7,6 @@ vi.mock("@/actions/web-push", () => ({
     success: true,
     data: { message: "deleted" },
   }),
-  getUserPushSubscriptions: vi.fn().mockResolvedValue({
-    success: true,
-    data: { subscriptions: [] },
-  }),
-  getVapidPublicKey: vi.fn().mockResolvedValue({
-    success: true,
-    data: { publicKey: "test-vapid-key" },
-  }),
   sendTestWebPush: vi.fn().mockResolvedValue({
     success: true,
     data: { message: "sent" },
@@ -26,6 +18,17 @@ vi.mock("@/actions/web-push", () => ({
   updateWebPushSubscription: vi.fn().mockResolvedValue({
     success: true,
     data: { message: "updated" },
+  }),
+}));
+
+vi.mock("@/lib/client/api/web-push-read", () => ({
+  getUserPushSubscriptions: vi.fn().mockResolvedValue({
+    success: true,
+    data: { subscriptions: [] },
+  }),
+  getVapidPublicKey: vi.fn().mockResolvedValue({
+    success: true,
+    data: { publicKey: "test-vapid-key" },
   }),
 }));
 

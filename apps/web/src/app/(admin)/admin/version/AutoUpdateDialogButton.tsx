@@ -10,11 +10,13 @@ import type {
 } from "@repo/shared-types/api/auto-update";
 
 import {
-  getAutoUpdateOverview,
-  getRuntimeVersionInfo,
   triggerAutoUpdate,
   updateAutoUpdateConfig,
 } from "@/actions/auto-update";
+import {
+  getAutoUpdateOverview,
+  getRuntimeVersionInfo,
+} from "@/lib/client/api/auto-update-read";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
@@ -105,7 +107,7 @@ export default function AutoUpdateDialogButton() {
     useCallback(async (): Promise<AutoUpdateOverview | null> => {
       setLoadingOverview(true);
       try {
-        const result = await getAutoUpdateOverview({});
+        const result = await getAutoUpdateOverview();
         if (!result.success || !result.data) {
           toast.error(result.message || "加载自动更新配置失败");
           return null;
@@ -218,7 +220,7 @@ export default function AutoUpdateDialogButton() {
       while (Date.now() - startedAt <= POLL_TIMEOUT_MS) {
         await sleep(POLL_INTERVAL_MS);
         try {
-          const result = await getRuntimeVersionInfo({});
+          const result = await getRuntimeVersionInfo();
           if (!result.success || !result.data) {
             continue;
           }

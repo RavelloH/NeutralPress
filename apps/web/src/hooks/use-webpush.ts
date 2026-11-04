@@ -5,12 +5,14 @@ import type { ApiResponse } from "@repo/shared-types/api/common";
 
 import {
   deleteWebPushSubscription,
-  getUserPushSubscriptions,
-  getVapidPublicKey,
   sendTestWebPush,
   subscribeToWebPush,
   updateWebPushSubscription,
 } from "@/actions/web-push";
+import {
+  getUserPushSubscriptions,
+  getVapidPublicKey,
+} from "@/lib/client/api/web-push-read";
 import { getBrowserName, getOSName } from "@/lib/shared/user-agent";
 
 /**

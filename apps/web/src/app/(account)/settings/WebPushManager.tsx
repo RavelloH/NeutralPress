@@ -43,7 +43,7 @@ export default function WebPushManager() {
       os: string | null;
       isActive: boolean;
       createdAt: Date;
-      lastUsedAt: Date;
+      lastUsedAt: Date | null;
       endpoint: string;
     }>
   >([]);
@@ -64,24 +64,29 @@ export default function WebPushManager() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res = (await getUserPushSubscriptions()) as ApiResponse<{
-      subscriptions: Array<{
-        id: string;
-        deviceName: string;
-        browser: string | null;
-        os: string | null;
-        isActive: boolean;
-        createdAt: Date;
-        lastUsedAt: Date;
-        endpoint: string;
-      }>;
-    } | null>;
-    if (res.success && res.data) {
-      setItems(res.data.subscriptions);
-    } else {
-      toast.error(res.message || "获取订阅列表失败");
+    try {
+      const res = (await getUserPushSubscriptions()) as ApiResponse<{
+        subscriptions: Array<{
+          id: string;
+          deviceName: string;
+          browser: string | null;
+          os: string | null;
+          isActive: boolean;
+          createdAt: Date;
+          lastUsedAt: Date | null;
+          endpoint: string;
+        }>;
+      } | null>;
+      if (res.success && res.data) {
+        setItems(res.data.subscriptions);
+      } else {
+        toast.error(res.message || "获取订阅列表失败");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "获取订阅列表失败");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [toast, getUserPushSubscriptions]);
 
   useEffect(() => {
