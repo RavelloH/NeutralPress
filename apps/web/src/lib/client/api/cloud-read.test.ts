@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getCloudHistory, getCloudTrends } from "@/lib/client/api/cloud-read";
+import {
+  getCloudConfig,
+  getCloudHistory,
+  getCloudRemoteStatus,
+  getCloudTrends,
+} from "@/lib/client/api/cloud-read";
 
 describe("Cloud HTTP client privacy", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -45,5 +50,33 @@ describe("Cloud HTTP client privacy", () => {
         cache: "no-store",
       }),
     );
+  });
+});
+
+describe("Cloud private config and remote probe POST clients", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("keeps private config and network probes out of GET and URL logs", async () => {
+    const spy = vi.fn().mockResolvedValue({
+      status: 200,
+      json: async () => ({ success: true, data: { enabled: true } }),
+    });
+    vi.stubGlobal("fetch", spy);
+    await getCloudConfig();
+    await getCloudRemoteStatus();
+    expect(spy.mock.calls.map((call) => call[0])).toEqual([
+      "/api/public/admin/cloud/config",
+      "/api/public/admin/cloud/remote-status",
+    ]);
+    for (const [, options] of spy.mock.calls) {
+      expect(options).toEqual(
+        expect.objectContaining({
+          method: "POST",
+          credentials: "same-origin",
+          cache: "no-store",
+          body: "{}",
+        }),
+      );
+    }
   });
 });

@@ -8,10 +8,11 @@ import {
 } from "@remixicon/react";
 import type { CronConfig, CronHistoryItem } from "@repo/shared-types/api/cron";
 
-import { getCronConfig, triggerCron, updateCronConfig } from "@/actions/cron";
+import { triggerCron, updateCronConfig } from "@/actions/cron";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getCronConfig } from "@/lib/client/api/cron-config-read";
 import { getCronHistory } from "@/lib/client/api/cron-history";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoTransition } from "@/ui/AutoTransition";
@@ -193,7 +194,7 @@ export default function CronReport() {
       setError(null);
       try {
         const [configResult, historyResult] = await Promise.all([
-          getCronConfig({}),
+          getCronConfig(),
           getCronHistory({
             page: 1,
             pageSize: 1,

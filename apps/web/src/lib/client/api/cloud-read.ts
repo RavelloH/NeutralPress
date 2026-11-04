@@ -1,10 +1,15 @@
 import type {
+  CloudConfig,
   CloudHistoryItem,
+  CloudRemoteStatus,
   CloudTrendItem,
   GetCloudHistory,
   GetCloudTrends,
 } from "@repo/shared-types/api/cloud";
-import type { ApiResponse } from "@repo/shared-types/api/common";
+import type {
+  ApiResponse,
+  ApiResponseData,
+} from "@repo/shared-types/api/common";
 
 import { fetchPublicRead } from "@/lib/client/api/read";
 
@@ -32,4 +37,33 @@ export function getCloudTrends(
   signal?: AbortSignal,
 ): Promise<ApiResponse<CloudTrendItem[] | null>> {
   return fetchPublicRead("/api/public/admin/cloud/trends", params, signal);
+}
+
+/** Settings and remote status contain private cloud endpoints: native same-origin JSON POST. */
+async function cloudPrivatePost<T extends ApiResponseData>(
+  operation: "config" | "remote-status",
+  signal?: AbortSignal,
+): Promise<ApiResponse<T | null>> {
+  const response = await fetch("/api/public/admin/cloud/" + operation, {
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+    signal,
+  });
+  if (response.status >= 500) throw new Error("获取云端配置或状态失败");
+  return (await response.json()) as ApiResponse<T | null>;
+}
+
+export function getCloudConfig(
+  signal?: AbortSignal,
+): Promise<ApiResponse<CloudConfig | null>> {
+  return cloudPrivatePost<CloudConfig>("config", signal);
+}
+
+export function getCloudRemoteStatus(
+  signal?: AbortSignal,
+): Promise<ApiResponse<CloudRemoteStatus | null>> {
+  return cloudPrivatePost<CloudRemoteStatus>("remote-status", signal);
 }

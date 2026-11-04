@@ -3,6 +3,7 @@ import {
   GetCloudTrendsSchema,
 } from "@repo/shared-types/api/cloud";
 import type { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 import { parseSameOriginJson } from "@/lib/server/api-json-post";
 import * as service from "@/lib/server/services/cloud-domain";
@@ -24,22 +25,33 @@ function invalid(): NextResponse {
   ) as NextResponse;
 }
 
-/** Cloud history may contain sensitive delivery identifiers. Do not put them in URLs. */
+/** Cloud history, config and remote probes are private POSTs; mutations remain unavailable. */
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ operation: string }> },
 ) {
   const { operation } = await context.params;
-  if (operation !== "history") return invalid();
+  if (!["history", "config", "remote-status"].includes(operation))
+    return invalid();
   const parsedBody = await parseSameOriginJson(request, 8192);
   if (!parsedBody.ok) return parsedBody.response;
-  const parsed = GetCloudHistorySchema.omit({ access_token: true })
-    .strict()
-    .safeParse(parsedBody.input);
-  if (!parsed.success) return invalid();
-  const result = await service.getCloudHistory(parsed.data, {
-    environment: "serverless",
-  });
+  let result: NextResponse;
+  if (operation === "history") {
+    const parsed = GetCloudHistorySchema.omit({ access_token: true })
+      .strict()
+      .safeParse(parsedBody.input);
+    if (!parsed.success) return invalid();
+    result = await service.getCloudHistory(parsed.data, {
+      environment: "serverless",
+    });
+  } else {
+    if (!z.object({}).strict().safeParse(parsedBody.input).success)
+      return invalid();
+    result =
+      operation === "config"
+        ? await service.getCloudConfig({}, { environment: "serverless" })
+        : await service.getCloudRemoteStatus({}, { environment: "serverless" });
+  }
   result.headers.set("Cache-Control", "private, no-store");
   result.headers.set("X-Content-Type-Options", "nosniff");
   return result;

@@ -9,16 +9,15 @@ import {
   type CloudRemoteStatus,
 } from "@repo/shared-types/api/cloud";
 
+import { syncCloudNow, updateCloudConfig } from "@/actions/cloud";
+import { GridItem } from "@/components/client/layout/RowGrid";
+import ErrorPage from "@/components/ui/Error";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import {
   getCloudConfig,
   getCloudHistory,
   getCloudRemoteStatus,
-  syncCloudNow,
-  updateCloudConfig,
-} from "@/actions/cloud";
-import { GridItem } from "@/components/client/layout/RowGrid";
-import ErrorPage from "@/components/ui/Error";
-import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+} from "@/lib/client/api/cloud-read";
 import { formatDateTimeWithSeconds } from "@/lib/shared/date-format";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
@@ -212,8 +211,8 @@ export default function CloudReport() {
       setError(null);
       try {
         const [configResult, remoteResult, historyResult] = await Promise.all([
-          getCloudConfig({}),
-          getCloudRemoteStatus({}),
+          getCloudConfig(),
+          getCloudRemoteStatus(),
           getCloudHistory({
             page: 1,
             pageSize: 1,

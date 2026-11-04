@@ -8,6 +8,8 @@ import * as service from "@/lib/server/services/cloud-domain";
 vi.mock("@/lib/server/services/cloud-domain", () => ({
   getCloudHistory: vi.fn(),
   getCloudTrends: vi.fn(),
+  getCloudConfig: vi.fn(),
+  getCloudRemoteStatus: vi.fn(),
 }));
 const context = (operation: string) => ({
   params: Promise.resolve({ operation }),
@@ -36,13 +38,72 @@ function get(operation: string, params: unknown = {}, extra = "") {
 describe("Cloud administration HTTP read whitelist", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("does not expose remote config, status probing or sync writes", async () => {
-    for (const op of ["config", "status", "sync", "update"]) {
+  it("never exposes config, remote probing or sync via GET; write operations stay blocked", async () => {
+    for (const op of ["config", "remote-status", "sync", "update"]) {
       expect((await GET(get(op), context(op))).status).toBe(400);
+    }
+    for (const op of ["sync", "update", "status"]) {
       expect((await POST(post(op), context(op))).status).toBe(400);
     }
     expect(service.getCloudHistory).not.toHaveBeenCalled();
     expect(service.getCloudTrends).not.toHaveBeenCalled();
+  });
+
+  it("only permits same-origin empty JSON POST for config and remote probes", async () => {
+    for (const operation of ["config", "remote-status"]) {
+      expect(
+        (
+          await POST(
+            post(operation, { access_token: "secret" }),
+            context(operation),
+          )
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await POST(
+            post(operation, { cloudBaseUrl: "https://example.com" }),
+            context(operation),
+          )
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await POST(
+            post(operation, {}, { origin: "https://evil.example" }),
+            context(operation),
+          )
+        ).status,
+      ).toBe(403);
+    }
+    expect(service.getCloudConfig).not.toHaveBeenCalled();
+    expect(service.getCloudRemoteStatus).not.toHaveBeenCalled();
+  });
+
+  it("keeps cloud config, status probing and auth errors private and uncached", async () => {
+    vi.mocked(service.getCloudConfig).mockResolvedValueOnce(
+      NextResponse.json({ success: true, data: { enabled: true } }) as never,
+    );
+    vi.mocked(service.getCloudRemoteStatus).mockResolvedValueOnce(
+      NextResponse.json({ success: false }, { status: 401 }) as never,
+    );
+    const config = await POST(post("config", {}), context("config"));
+    const remote = await POST(
+      post("remote-status", {}),
+      context("remote-status"),
+    );
+    expect(config.status).toBe(200);
+    expect(remote.status).toBe(401);
+    expect(config.headers.get("cache-control")).toBe("private, no-store");
+    expect(remote.headers.get("cache-control")).toBe("private, no-store");
+    expect(service.getCloudConfig).toHaveBeenCalledWith(
+      {},
+      { environment: "serverless" },
+    );
+    expect(service.getCloudRemoteStatus).toHaveBeenCalledWith(
+      {},
+      { environment: "serverless" },
+    );
   });
 
   it("rejects history access tokens, invalid filters and cross-origin browser POST", async () => {
