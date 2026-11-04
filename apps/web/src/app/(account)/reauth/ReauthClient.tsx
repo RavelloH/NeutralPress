@@ -9,15 +9,12 @@ import {
 } from "@remixicon/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import {
-  getCurrentUserForReauth,
-  verifyPasswordForReauth,
-  verifyTotpForReauth,
-} from "@/actions/reauth";
+import { verifyPasswordForReauth, verifyTotpForReauth } from "@/actions/reauth";
 import PasskeyReauthButton from "@/app/(account)/reauth/PasskeyReauthButton";
 import UnauthorizedPage from "@/app/unauthorized";
 import { CaptchaButton } from "@/components/ui/CaptchaButton";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { getCurrentUserForReauth } from "@/lib/client/api/admin-infra-read";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";

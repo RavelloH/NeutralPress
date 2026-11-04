@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SystemInfo } from "@repo/shared-types/api/system";
 
-import { getSystemInfo } from "@/actions/system";
+import { getSystemInfo } from "@/lib/client/api/admin-infra-read";
 import { useBroadcastStore } from "@/store/broadcast-store";
 
 // 自动刷新间隔（毫秒）
@@ -51,7 +51,7 @@ async function fetchSystemInfo(
   store.listeners.forEach((listener) => listener());
 
   try {
-    const res = await getSystemInfo({});
+    const res = await getSystemInfo();
     if (!res.success) {
       store.error = new Error(res.message || "获取系统信息失败");
       store.data = null;

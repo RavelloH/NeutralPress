@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { RiRefreshLine, RiSaveLine } from "@remixicon/react";
 
-import { getSettings, updateSettings } from "@/actions/setting";
+import { updateSettings } from "@/actions/setting";
 import type { SettingSelectMessage } from "@/app/(admin)/admin/settings/SettingsSelect";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import {
@@ -14,6 +14,7 @@ import {
   getConfigDefinition,
 } from "@/data/default-configs";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { getSettings } from "@/lib/client/api/admin-infra-read";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { isDateString } from "@/lib/shared/date-format";
 import generateGradient from "@/lib/shared/gradient";
@@ -60,10 +61,7 @@ export default function SettingSheet() {
   const fetchSettings = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await runWithAuth(
-        getSettings,
-        { access_token: undefined }, // 使用 cookie 中的 token
-      );
+      const result = await getSettings();
 
       let dbSettings: { key: string; value: unknown; updatedAt: string }[] = [];
 
