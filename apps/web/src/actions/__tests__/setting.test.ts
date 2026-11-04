@@ -71,6 +71,10 @@ vi.mock("@/data/default-configs", () => ({
   extractDefaultValue: vi.fn((v: unknown) => v),
   extractOptions: vi.fn(() => null),
   extractValidationRules: vi.fn(() => null),
+  isSensitiveConfigKey: vi.fn(
+    (key: string) =>
+      key.startsWith("secret.") || key === "cdn.cloudflare.purgeToken",
+  ),
 }));
 
 vi.mock("next/server", () => ({
@@ -104,6 +108,34 @@ describe("setting actions", () => {
   });
 
   describe("getSettings", () => {
+    it("does not return saved plaintext for metadata-sensitive standard Config fields", async () => {
+      setupSuccessMocks();
+      const token = "private-cf-token-must-not-appear-123";
+      vi.mocked(prisma.config.findMany).mockResolvedValue([
+        {
+          key: "cdn.cloudflare.purgeToken",
+          value: { default: token },
+          updatedAt: new Date("2026-11-05T00:00:00Z"),
+        },
+        {
+          key: "cdn.cloudflare.zoneId",
+          value: { default: "763e43ff82498affce6fafc1648f69cb" },
+          updatedAt: new Date("2026-11-05T00:00:00Z"),
+        },
+      ] as never);
+      const { getSettings } = await import("@/actions/setting");
+      const result = await getSettings({ access_token: "valid-token" });
+      expect(result).toEqual(expect.objectContaining({ success: true }));
+      expect(JSON.stringify(result)).not.toContain(token);
+      const data = (result as { data?: Array<{ key: string; value: unknown }> })
+        .data;
+      expect(
+        data?.find((item) => item.key === "cdn.cloudflare.purgeToken")?.value,
+      ).toEqual({ default: "" });
+      expect(
+        data?.find((item) => item.key === "cdn.cloudflare.zoneId")?.value,
+      ).toEqual({ default: "763e43ff82498affce6fafc1648f69cb" });
+    });
     it("返回配置列表 - 成功路径", async () => {
       setupSuccessMocks();
       vi.mocked(prisma.config.findMany).mockResolvedValue([

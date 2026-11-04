@@ -18,6 +18,8 @@ vi.mock("@/data/default-configs", () => ({
     ["secret.apiKey", "should-not-appear"],
   ]),
   CONFIG_DEFINITIONS: {},
+  isSensitiveConfigKey: (key: string) =>
+    key.startsWith("secret.") || key === "cdn.cloudflare.purgeToken",
 }));
 
 import {

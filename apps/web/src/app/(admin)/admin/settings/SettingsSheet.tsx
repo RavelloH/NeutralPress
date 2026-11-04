@@ -1010,6 +1010,7 @@ export default function SettingSheet() {
       notice: "通知策略",
       ai: "AI 集成",
       analytics: "访问统计",
+      cdn: "CDN 加速",
       message: "私信策略",
     };
     return category ? categories[category] || category : "配置设置";

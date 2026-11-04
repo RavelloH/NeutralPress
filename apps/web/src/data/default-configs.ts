@@ -23,15 +23,20 @@ export interface ConfigInputAttributes {
   max?: number;
   step?: number;
   tips?: string;
+  type?: "text" | "password";
 }
 
 export interface ConfigValidationRules {
   min?: number;
   max?: number;
   integer?: boolean;
+  pattern?: string;
+  minLength?: number;
+  maxLength?: number;
 }
 
 export interface ConfigMeta {
+  sensitive?: boolean;
   options?: ConfigOption[];
   input?: ConfigInputAttributes;
   validation?: ConfigValidationRules;
@@ -858,6 +863,35 @@ export const CONFIG_DEFINITIONS = {
   },
 
   // =====================================
+  // CDN 加速（标准 Config 配置，而非独立表单）
+  // =====================================
+  "cdn.cloudflare.zoneId": {
+    default: "",
+    description: "Cloudflare Zone ID（32 位十六进制）。留空表示尚未配置。",
+    meta: { validation: { pattern: "^(?:|[a-fA-F0-9]{32})$" } },
+  },
+  "cdn.cloudflare.siteUrl": {
+    default: "",
+    description: "公开 HTTPS 站点 Origin；留空使用 site.url。无需重新部署。",
+    meta: {
+      validation: {
+        pattern: "^(?:|https://[a-zA-Z0-9.-]+/?)$",
+        maxLength: 253,
+      },
+    },
+  },
+  "cdn.cloudflare.purgeToken": {
+    default: "",
+    description:
+      "Cloudflare Cache Purge Token。输入新 Token 时更新；留空保留已有值。按现有项目约定明文存入 Config。",
+    meta: {
+      sensitive: true,
+      input: { type: "password" },
+      validation: { minLength: 20, maxLength: 4096 },
+    },
+  },
+
+  // =====================================
   // 访问统计
   // =====================================
   "analytics.enable": {
@@ -924,6 +958,17 @@ export function getConfigDefinition(key: string) {
   }
 
   return CONFIG_DEFINITIONS[key as ConfigKeys];
+}
+
+/** Common classification for Config readers, snapshots and audit logging. */
+export function isSensitiveConfigKey(key: string): boolean {
+  if (key.startsWith("secret.")) return true;
+  const definition = getConfigDefinition(key);
+  return Boolean(
+    definition &&
+      "meta" in definition &&
+      (definition.meta as ConfigMeta)?.sensitive === true,
+  );
 }
 
 /**

@@ -1,145 +1,99 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const mock = vi.hoisted(() => {
-  const rows = new Map<string, unknown>();
-  const config = {
-    findMany: vi.fn(async ({ where }: { where: { key: { in: string[] } } }) =>
-      [...rows.entries()]
-        .filter(([key]) => where.key.in.includes(key))
-        .map(([key, value]) => ({ key, value })),
-    ),
-    findUnique: vi.fn(async ({ where }: { where: { key: string } }) =>
-      rows.has(where.key)
-        ? { key: where.key, value: rows.get(where.key) }
-        : null,
-    ),
-    upsert: vi.fn(
-      async ({
-        where,
-        create,
-        update,
-      }: {
-        where: { key: string };
-        create: { value: unknown };
-        update: { value: unknown };
-      }) => {
-        const value = rows.has(where.key) ? update.value : create.value;
-        rows.set(where.key, value);
-        return { key: where.key, value };
-      },
-    ),
-  };
-  const prisma = {
-    config,
-    $transaction: vi.fn(
-      async (fn: (tx: { config: typeof config }) => Promise<unknown>) =>
-        fn({ config }),
-    ),
-  };
-  return { rows, config, prisma };
-});
-vi.mock("@/lib/server/prisma", () => ({ default: mock.prisma }));
+const mock = vi.hoisted(() => ({
+  findMany: vi.fn(),
+  getConfigs: vi.fn(),
+  getSensitiveConfigValue: vi.fn(),
+}));
+
+vi.mock("@/lib/server/prisma", () => ({
+  default: { config: { findMany: mock.findMany } },
+}));
+vi.mock("@/lib/server/config-cache", () => ({
+  getConfigs: mock.getConfigs,
+  getSensitiveConfigValue: mock.getSensitiveConfigValue,
+}));
 
 import {
   getCloudflareCacheCredentials,
-  getCloudflareCacheSettings,
   normalizeCloudflareSiteUrl,
-  saveCloudflareCacheSettings,
 } from "@/lib/server/cloudflare-cache-config";
 
-const TOKEN = "cf-purge-token-example-long-enough";
 const ZONE = "763e43ff82498affce6fafc1648f69cb";
+const TOKEN = "example-purge-token-0123456789012345";
 
-describe("Cloudflare CDN internal Config integration", () => {
+describe("Cloudflare CDN canonical Config integration", () => {
   beforeEach(() => {
-    mock.rows.clear();
     vi.clearAllMocks();
-    vi.stubEnv("CLOUDFLARE_CACHE_PURGE_TOKEN", "");
-    vi.stubEnv("CLOUDFLARE_CACHE_ZONE_ID", "");
-    vi.stubEnv("NEUTRALPRESS_CDN_SITE_URL", "");
+    mock.findMany.mockResolvedValue([]);
+    mock.getConfigs.mockResolvedValue([
+      ZONE,
+      "https://example.com",
+      "https://example.com",
+    ]);
+    mock.getSensitiveConfigValue.mockResolvedValue(TOKEN);
   });
-  afterEach(() => vi.unstubAllEnvs());
 
-  it("reads legacy environment config only before database initialization", async () => {
-    vi.stubEnv("CLOUDFLARE_CACHE_PURGE_TOKEN", TOKEN);
-    vi.stubEnv("CLOUDFLARE_CACHE_ZONE_ID", ZONE);
-    mock.rows.set("site.url", { default: "https://ravelloh.com" });
-    expect(await getCloudflareCacheCredentials()).toMatchObject({
-      token: TOKEN,
+  it("uses standard getConfigs and private Config accessor when new keys exist", async () => {
+    mock.findMany.mockResolvedValue([{ key: "cdn.cloudflare.zoneId" }]);
+    expect(await getCloudflareCacheCredentials()).toEqual({
       zone: ZONE,
-      source: "environment",
+      token: TOKEN,
+      siteUrl: "https://example.com",
+      source: "config",
     });
-    expect(await getCloudflareCacheSettings()).toMatchObject({
-      tokenConfigured: true,
-      source: "environment",
-    });
-  });
-
-  it("migrates legacy token as plaintext into the normal Config table", async () => {
-    vi.stubEnv("CLOUDFLARE_CACHE_PURGE_TOKEN", TOKEN);
-    await saveCloudflareCacheSettings({
-      zoneId: ZONE,
-      siteUrl: "https://ravelloh.com",
-    });
-    expect(mock.rows.get("secret.cdn.cloudflare.purgeToken")).toBe(TOKEN);
-    expect(mock.rows.get("cdn.cloudflare")).toEqual({
-      zoneId: ZONE,
-      siteUrl: "https://ravelloh.com",
-    });
-    expect(await getCloudflareCacheSettings()).toEqual({
-      zoneId: ZONE,
-      siteUrl: "https://ravelloh.com",
-      tokenConfigured: true,
-      source: "database",
-    });
-    expect(JSON.stringify(await getCloudflareCacheSettings())).not.toContain(
-      TOKEN,
+    expect(mock.getConfigs).toHaveBeenCalledWith([
+      "cdn.cloudflare.zoneId",
+      "cdn.cloudflare.siteUrl",
+      "site.url",
+    ]);
+    expect(mock.getSensitiveConfigValue).toHaveBeenCalledWith(
+      "cdn.cloudflare.purgeToken",
     );
   });
 
-  it("uses updated database settings immediately without environment or restart", async () => {
-    await saveCloudflareCacheSettings({
-      zoneId: ZONE,
-      siteUrl: "https://ravelloh.com",
-      token: TOKEN,
-    });
-    vi.stubEnv("CLOUDFLARE_CACHE_ZONE_ID", "");
-    vi.stubEnv("CLOUDFLARE_CACHE_PURGE_TOKEN", "");
-    expect((await getCloudflareCacheCredentials())?.token).toBe(TOKEN);
-    const replacement = "new-token-12345678901234567890";
-    await saveCloudflareCacheSettings({
-      zoneId: ZONE,
-      siteUrl: "https://ravelloh.com",
-      token: replacement,
-    });
-    expect((await getCloudflareCacheCredentials())?.token).toBe(replacement);
-    expect(mock.config.findMany).toHaveBeenCalledTimes(2);
-  });
-
-  it("never falls back to stale environment secrets after database setup", async () => {
-    vi.stubEnv("CLOUDFLARE_CACHE_PURGE_TOKEN", TOKEN);
-    vi.stubEnv("CLOUDFLARE_CACHE_ZONE_ID", ZONE);
-    mock.rows.set("cdn.cloudflare", {
-      zoneId: ZONE,
-      siteUrl: "https://ravelloh.com",
-    });
+  it("does not silently use previous secrets when standard config is incomplete", async () => {
+    mock.findMany.mockResolvedValue([{ key: "cdn.cloudflare.zoneId" }]);
+    mock.getSensitiveConfigValue.mockResolvedValue("");
     expect(await getCloudflareCacheCredentials()).toBeNull();
+    expect(mock.findMany).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects invalid public origin URLs and incomplete settings", async () => {
+  it("reads legacy Config values during a safe staged upgrade", async () => {
+    mock.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        key: "cdn.cloudflare",
+        value: { zoneId: ZONE, siteUrl: "https://ravelloh.com" },
+      },
+      { key: "secret.cdn.cloudflare.purgeToken", value: TOKEN },
+    ]);
+    expect(await getCloudflareCacheCredentials()).toEqual({
+      zone: ZONE,
+      token: TOKEN,
+      siteUrl: "https://ravelloh.com",
+      source: "legacy",
+    });
+    expect(mock.getSensitiveConfigValue).not.toHaveBeenCalled();
+  });
+
+  it("never reads legacy environment variables on a fresh installation", async () => {
+    expect(await getCloudflareCacheCredentials()).toBeNull();
+    expect(mock.getConfigs).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid HTTPS public origins", () => {
+    expect(normalizeCloudflareSiteUrl("https://example.com/")).toBe(
+      "https://example.com",
+    );
     expect(() => normalizeCloudflareSiteUrl("http://example.com")).toThrow();
     expect(() =>
       normalizeCloudflareSiteUrl("https://example.com/admin"),
     ).toThrow();
-    await expect(
-      saveCloudflareCacheSettings({
-        zoneId: "invalid",
-        siteUrl: "https://ravelloh.com",
-        token: TOKEN,
-      }),
-    ).rejects.toThrow();
+    expect(() =>
+      normalizeCloudflareSiteUrl("https://user:pass@example.com"),
+    ).toThrow();
   });
 });

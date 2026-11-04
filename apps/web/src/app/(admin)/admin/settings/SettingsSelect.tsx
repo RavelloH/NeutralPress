@@ -55,6 +55,10 @@ const settings = [
     name: "访问统计",
     key: "analytics",
   },
+  {
+    name: "CDN 加速",
+    key: "cdn",
+  },
 ];
 
 export interface SettingSelectMessage {

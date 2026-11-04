@@ -55,6 +55,7 @@ import {
   extractOptions,
   extractValidationRules,
   getConfigDefinition,
+  isSensitiveConfigKey,
 } from "@/data/default-configs";
 
 /*
@@ -206,6 +207,41 @@ export async function updateSettings(
       }
     }
 
+    // Generic string constraints come from CONFIG_DEFINITIONS, not a
+    // per-integration endpoint or parallel schema.
+    if (typeof newValue === "string") {
+      if (isSensitiveConfigKey(setting.key) && newValue.length === 0) {
+        return response.badRequest({
+          message: "敏感配置留空表示保持原值；请输入新值后再保存。",
+        });
+      }
+      if (
+        validationRules?.pattern &&
+        !new RegExp(validationRules.pattern).test(newValue)
+      ) {
+        return response.badRequest({
+          message: "配置项 " + setting.key + " 格式不正确。",
+        });
+      }
+      if (
+        newValue.length > 0 &&
+        validationRules?.minLength !== undefined &&
+        newValue.length < validationRules.minLength
+      ) {
+        return response.badRequest({
+          message: "配置项 " + setting.key + " 长度不足。",
+        });
+      }
+      if (
+        validationRules?.maxLength !== undefined &&
+        newValue.length > validationRules.maxLength
+      ) {
+        return response.badRequest({
+          message: "配置项 " + setting.key + " 超过最大长度。",
+        });
+      }
+    }
+
     sanitizedSettings.push(setting);
   }
 
@@ -255,14 +291,16 @@ export async function updateSettings(
       const oldData: Record<string, unknown> = {
         settings: sanitizedSettings.map((s) => ({
           key: s.key,
-          oldValue: oldValuesMap.get(s.key) || null,
+          oldValue: isSensitiveConfigKey(s.key)
+            ? "[REDACTED]"
+            : oldValuesMap.get(s.key) || null,
         })),
       };
 
       const newData: Record<string, unknown> = {
         settings: sanitizedSettings.map((s) => ({
           key: s.key,
-          newValue: s.value,
+          newValue: isSensitiveConfigKey(s.key) ? "[REDACTED]" : s.value,
         })),
       };
 
