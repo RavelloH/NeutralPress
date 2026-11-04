@@ -28,7 +28,6 @@ import {
   deleteMedia,
   ensureUserHomeFolder,
   type FolderItem,
-  getMediaExplorerPage,
   moveItems,
 } from "@/actions/media";
 import MediaEditDialog from "@/app/(admin)/admin/media/MediaEditDialog";
@@ -40,7 +39,10 @@ import RowGrid from "@/components/client/layout/RowGrid";
 import type { FilterConfig } from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { useMobile } from "@/hooks/use-mobile";
-import { getMediaDetail } from "@/lib/client/api/media-read";
+import {
+  getMediaDetail,
+  getMediaExplorerPage,
+} from "@/lib/client/api/media-read";
 import type { SelectedItems } from "@/types/media-table";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoTransition } from "@/ui/AutoTransition";

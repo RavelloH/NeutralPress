@@ -5,9 +5,9 @@ import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getNotices } from "@/actions/notice";
 import NotificationsModal from "@/app/@modal/(.)notifications/NotificationsModal";
 import { authVerify } from "@/lib/server/auth-verify";
+import { getNotices } from "@/lib/server/services/notice-domain";
 
 export default async function NotificationsInterceptPage() {
   // 检查登录状态

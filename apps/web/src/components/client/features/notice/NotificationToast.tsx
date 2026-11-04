@@ -5,8 +5,8 @@ import { createPortal } from "react-dom";
 import { RiCloseLine, RiNotification3Line } from "@remixicon/react";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { markNoticesAsRead } from "@/actions/notice";
 import { useNavigateWithTransition } from "@/components/ui/Link";
+import { markNoticesAsRead } from "@/lib/client/api/notice-write";
 import { useFooterStore } from "@/store/footer-store";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";

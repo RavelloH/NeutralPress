@@ -15,6 +15,7 @@ import type { GalleryPhoto } from "@/lib/gallery-layout";
 import type {
   BreadcrumbItem,
   FolderItem,
+  GetMediaExplorerPageParams,
   MediaExplorerPageData,
 } from "@/lib/shared/media-types";
 
@@ -97,12 +98,7 @@ export function getFolderBreadcrumb(
 }
 
 export function getMediaExplorerPage(
-  params: {
-    currentFolderId?: number | null;
-    page?: number;
-    pageSize?: number;
-    search?: string;
-  } = {},
+  params: Omit<GetMediaExplorerPageParams, "access_token">,
   signal?: AbortSignal,
 ): Promise<ApiResponse<MediaExplorerPageData | null>> {
   return fetchPublicRead<MediaExplorerPageData | null>(

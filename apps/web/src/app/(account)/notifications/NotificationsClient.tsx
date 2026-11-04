@@ -17,13 +17,13 @@ import {
   RiZzzLine,
 } from "@remixicon/react";
 
-import {
-  getReadNotices,
-  markAllNoticesAsRead,
-  markNoticesAsRead,
-} from "@/actions/notice";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { getReadNotices } from "@/lib/client/api/notice-read";
+import {
+  markAllNoticesAsRead,
+  markNoticesAsRead,
+} from "@/lib/client/api/notice-write";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
@@ -161,34 +161,38 @@ export default function NotificationsClient({
     // 未读通知，先标记为已读
     if (!notice.isRead) {
       startTransition(async () => {
-        const result = await markNoticesAsRead([notice.id]);
-        if (result.success) {
-          // 更新本地状态
-          setUnreadNotices((prev) => {
-            const newUnread = prev.filter((n) => n.id !== notice.id);
-            // 同步未读数到 localStorage 并广播
-            updateUnreadCount(newUnread.length);
-            return newUnread;
-          });
-          setReadNotices((prev) => {
-            const newList = [notice, ...prev];
-            // 更新 ref 中的计数
-            readCountRef.current = newList.length;
-            return newList;
-          });
-          setTotalReadCount((prev) => prev + 1); // 已读总数 +1
+        try {
+          const result = await markNoticesAsRead([notice.id]);
+          if (result.success) {
+            // 更新本地状态
+            setUnreadNotices((prev) => {
+              const newUnread = prev.filter((n) => n.id !== notice.id);
+              // 同步未读数到 localStorage 并广播
+              updateUnreadCount(newUnread.length);
+              return newUnread;
+            });
+            setReadNotices((prev) => {
+              const newList = [notice, ...prev];
+              // 更新 ref 中的计数
+              readCountRef.current = newList.length;
+              return newList;
+            });
+            setTotalReadCount((prev) => prev + 1); // 已读总数 +1
 
-          // 如果有链接，跳转
-          if (notice.link) {
-            if (isModal && onRequestClose) {
-              // 模态框模式：调用关闭回调，由外部控制动画和跳转
-              onRequestClose(notice.link);
-            } else {
-              navigate(notice.link);
+            // 如果有链接，跳转
+            if (notice.link) {
+              if (isModal && onRequestClose) {
+                // 模态框模式：调用关闭回调，由外部控制动画和跳转
+                onRequestClose(notice.link);
+              } else {
+                navigate(notice.link);
+              }
             }
+          } else {
+            toast.error(result.message || "标记失败");
           }
-        } else {
-          toast.error(result.message || "标记失败");
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : "标记失败");
         }
       });
     }
@@ -203,22 +207,26 @@ export default function NotificationsClient({
 
     const unreadCount = unreadNotices.length;
     startTransition(async () => {
-      const result = await markAllNoticesAsRead();
-      if (result.success) {
-        // 将所有未读通知移到已读列表
-        setReadNotices((prev) => {
-          const newList = [...unreadNotices, ...prev];
-          // 更新 ref 中的计数
-          readCountRef.current = newList.length;
-          return newList;
-        });
-        setUnreadNotices([]);
-        setTotalReadCount((prev) => prev + unreadCount); // 已读总数增加
-        // 同步未读数到 localStorage 并广播
-        updateUnreadCount(0);
-        toast.success(result.message || "已全部标记为已读");
-      } else {
-        toast.error(result.message || "操作失败");
+      try {
+        const result = await markAllNoticesAsRead();
+        if (result.success) {
+          // 将所有未读通知移到已读列表
+          setReadNotices((prev) => {
+            const newList = [...unreadNotices, ...prev];
+            // 更新 ref 中的计数
+            readCountRef.current = newList.length;
+            return newList;
+          });
+          setUnreadNotices([]);
+          setTotalReadCount((prev) => prev + unreadCount); // 已读总数增加
+          // 同步未读数到 localStorage 并广播
+          updateUnreadCount(0);
+          toast.success(result.message || "已全部标记为已读");
+        } else {
+          toast.error(result.message || "操作失败");
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "操作失败");
       }
     });
   };
