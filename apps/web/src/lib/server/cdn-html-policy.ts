@@ -12,6 +12,23 @@ export const PRIVATE_HTML_CACHE_CONTROL = "private, no-store";
 export const HTML_CACHE_TAG = "np-isr-html";
 export const HTML_CACHE_TAG_PREFIX = "np-isr-path-";
 
+/**
+ * A full-page HTML response can also be requested by a monitoring tool using
+ * a wildcard Accept header (or no Accept). This is not a reliable RSC discriminator:
+ * Next.js App Router RSC fetches normally use the same wildcard Accept. The CDN and the Proxy
+ * must independently exclude the RSC protocol headers and _rsc query.
+ *
+ * This deliberately rejects JSON, text/x-component, and other Accept values.
+ */
+export function allowsHtmlDocumentAccept(accept: string | null): boolean {
+  if (accept === null || accept.trim() === "") return true;
+  const normalized = accept.trim().toLowerCase();
+  return (
+    normalized === "*/*" ||
+    /(?:^|,)\s*text\/html\s*(?:;[^,]*)?(?=,|$)/.test(normalized)
+  );
+}
+
 const BLOCKED_ROOTS = new Set([
   "admin",
   "api",

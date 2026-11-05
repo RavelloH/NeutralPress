@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { isPublicHtmlRevoking } from "@/lib/server/cdn-cache-pipeline";
 import {
+  allowsHtmlDocumentAccept,
   cacheTagsForPublicPath,
   isDeniedHtmlPath,
   isPublicRoot,
@@ -92,22 +93,32 @@ async function isShareableHtml(path: string): Promise<boolean> {
 }
 
 export async function proxy(request: NextRequest) {
-  // Never mark POST/Server Actions, RSC, authenticated or non-HTML shareable.
-  if (
-    request.method !== "GET" ||
-    !request.headers.get("accept")?.includes("text/html") ||
-    request.headers.has("cookie") ||
-    request.headers.has("authorization") ||
-    request.nextUrl.search
-  )
-    return NextResponse.next();
-
-  const path = normalizeHtmlPath(request.nextUrl.pathname);
+  // Default to non-shared HTML, including probe and HEAD requests.
+  // Next.js may strip internal RSC Flight headers in Proxy, so the Cloudflare
+  // Cache Rule must independently exclude them before looking up its cache.
   const response = NextResponse.next();
   response.headers.set(
     "Cloudflare-CDN-Cache-Control",
     PRIVATE_HTML_CACHE_CONTROL,
   );
+
+  if (
+    (request.method !== "GET" && request.method !== "HEAD") ||
+    !allowsHtmlDocumentAccept(request.headers.get("accept")) ||
+    request.headers.has("rsc") ||
+    request.headers.has("next-router-state-tree") ||
+    request.headers.has("next-router-prefetch") ||
+    request.headers.has("next-router-segment-prefetch") ||
+    request.headers.has("next-url") ||
+    request.headers.has("next-action") ||
+    request.headers.has("cookie") ||
+    request.headers.has("authorization") ||
+    request.nextUrl.search
+  ) {
+    return response;
+  }
+
+  const path = normalizeHtmlPath(request.nextUrl.pathname);
   if (!path) return response;
 
   try {

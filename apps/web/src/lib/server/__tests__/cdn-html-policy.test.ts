@@ -1,6 +1,8 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import {
+  allowsHtmlDocumentAccept,
   cacheTagsForPublicPath,
   htmlPathCacheTag,
   isDeniedHtmlPath,
@@ -9,6 +11,28 @@ import {
 } from "@/lib/server/cdn-html-policy";
 
 describe("unified public ISR Cloudflare policy", () => {
+  it("accepts browser HTML and safe probe Accept variants, but not RSC media types", () => {
+    for (const value of [
+      null,
+      "",
+      "*/*",
+      " */* ",
+      "text/html",
+      "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "TEXT/HTML;Q=1",
+    ])
+      expect(allowsHtmlDocumentAccept(value)).toBe(true);
+
+    for (const value of [
+      "application/json",
+      "text/x-component",
+      "text/plain",
+      "application/json, */*",
+      "image/webp",
+    ])
+      expect(allowsHtmlDocumentAccept(value)).toBe(false);
+  });
+
   it("blocks private, account, system and malformed HTML paths", () => {
     for (const path of [
       "/admin",

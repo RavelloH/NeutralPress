@@ -32,12 +32,19 @@ function request(
   opts?: {
     method?: string;
     cookie?: string;
-    accept?: string;
+    accept?: string | null;
     search?: string;
+    rsc?: boolean;
+    prefetch?: boolean;
+    routerState?: boolean;
   },
 ) {
-  const headers = new Headers({ accept: opts?.accept ?? "text/html" });
+  const headers = new Headers();
+  if (opts?.accept !== null) headers.set("accept", opts?.accept ?? "text/html");
   if (opts?.cookie) headers.set("cookie", opts.cookie);
+  if (opts?.rsc) headers.set("RSC", "1");
+  if (opts?.prefetch) headers.set("Next-Router-Prefetch", "1");
+  if (opts?.routerState) headers.set("Next-Router-State-Tree", "[]");
   return {
     method: opts?.method ?? "GET",
     headers,
@@ -83,6 +90,33 @@ describe("unified ISR HTML response eligibility", () => {
     }
   });
 
+  it("marks ordinary probe GET/HEAD with wildcard or absent Accept as shareable HTML", async () => {
+    for (const opts of [
+      { accept: "*/*" },
+      { accept: null },
+      { method: "HEAD", accept: "*/*" },
+    ]) {
+      const result = await policy("/posts", opts);
+      expect(result.cdn).toContain("public, max-age=60");
+      expect(result.tags).toContain("np-isr-html");
+    }
+  });
+
+  it("keeps RSC, prefetch and other structured content out of public HTML caching", async () => {
+    for (const opts of [
+      { accept: "*/*", rsc: true },
+      { accept: "*/*", routerState: true },
+      { accept: "*/*", prefetch: true },
+      { accept: "*/*", search: "?_rsc=hash" },
+      { accept: "text/x-component" },
+      { accept: "application/json" },
+    ]) {
+      const result = await policy("/posts", opts);
+      expect(result.cdn).toBe("private, no-store");
+      expect(result.tags).toBeNull();
+    }
+  });
+
   it("does not cache password/role protected article HTML", async () => {
     for (const accessMode of ["ROLE", "PASSWORD"]) {
       mocks.posts.mockResolvedValueOnce({ accessMode });
@@ -118,9 +152,15 @@ describe("unified ISR HTML response eligibility", () => {
     ]) {
       expect((await policy(path)).cdn, path).toBe("private, no-store");
     }
-    expect((await policy("/posts", { cookie: "session=1" })).cdn).toBeNull();
-    expect((await policy("/posts", { method: "POST" })).cdn).toBeNull();
-    expect((await policy("/posts", { search: "?preview=1" })).cdn).toBeNull();
+    expect((await policy("/posts", { cookie: "session=1" })).cdn).toBe(
+      "private, no-store",
+    );
+    expect((await policy("/posts", { method: "POST" })).cdn).toBe(
+      "private, no-store",
+    );
+    expect((await policy("/posts", { search: "?preview=1" })).cdn).toBe(
+      "private, no-store",
+    );
   });
 
   it("fails closed when the database is unavailable", async () => {
