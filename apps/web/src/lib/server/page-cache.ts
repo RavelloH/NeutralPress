@@ -7,6 +7,7 @@ import path from "path";
 import type { AllBlockConfigs } from "@/blocks/core/types/base";
 import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
+import { isValidPublicCollectionPage } from "@/lib/server/public-pagination";
 
 // 自定义 JSON 类型定义（避免与 Prisma 的 JsonValue 冲突）
 type CustomJsonValue =
@@ -551,11 +552,13 @@ export async function getMatchingPage(
     const lastSegment = slugSegments[slugSegments.length - 1];
     if (lastSegment) {
       const p = parseInt(lastSegment, 10);
-      if (!isNaN(p)) {
-        pageVal = p;
-        isExplicitPage = true;
-        basePathSegments = slugSegments.slice(0, -2);
-      }
+      // Reject non-canonical or unsafe numbers rather than rendering indexable
+      // infinite empty pages (/page/0, /page/999, /page/002, etc.).
+      if (!/^[1-9]\d*$/.test(lastSegment)) return null;
+      if (!Number.isSafeInteger(p)) return null;
+      pageVal = p;
+      isExplicitPage = true;
+      basePathSegments = slugSegments.slice(0, -2);
     }
   }
 
@@ -702,6 +705,18 @@ export async function getMatchingPage(
       });
 
       if (!isValid) {
+        continue;
+      }
+
+      if (
+        isExplicitPage &&
+        !(await isValidPublicCollectionPage(
+          candidate.path,
+          resolvedParams.slug,
+          pageVal,
+          resolvePageSizeFromConfig(page.config),
+        ))
+      ) {
         continue;
       }
 

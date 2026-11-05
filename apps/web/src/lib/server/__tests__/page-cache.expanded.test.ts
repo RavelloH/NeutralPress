@@ -5,7 +5,7 @@ vi.mock("@/lib/server/prisma", () => ({
     page: { findMany: vi.fn(), findUnique: vi.fn() },
     category: { findMany: vi.fn() },
     tag: { findMany: vi.fn() },
-    post: { findMany: vi.fn() },
+    post: { findMany: vi.fn(), count: vi.fn().mockResolvedValue(40) },
   },
 }));
 

@@ -15,6 +15,7 @@ vi.mock("@/lib/server/prisma", () => ({
     },
     post: {
       findMany: vi.fn(),
+      count: vi.fn().mockResolvedValue(40),
     },
   },
 }));
@@ -97,6 +98,7 @@ function createMockDbPage(overrides: Record<string, unknown> = {}) {
 describe("page-cache", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(prisma.page.findUnique).mockReset();
   });
 
   // =========================================================================
@@ -848,7 +850,7 @@ describe("page-cache", () => {
       // 当 URL 以 /page/N 结尾时，应该解析分页参数
       (mockPrisma.page.findUnique as any).mockResolvedValue(null);
 
-      const result = await getMatchingPage(["posts", "page", "2"]);
+      const result = await getMatchingPage(["unconfigured", "page", "2"]);
 
       // 没有匹配的页面模板时返回 null
       expect(result).toBeNull();

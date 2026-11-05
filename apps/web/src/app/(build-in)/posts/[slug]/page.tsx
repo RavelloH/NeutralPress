@@ -111,6 +111,12 @@ export async function generateMetadata({ params }: PageProps) {
       },
       {
         pathname: `/posts/${post.slug}`,
+        article: {
+          publishedTime: post.publishedAt
+            ? new Date(post.publishedAt).toISOString()
+            : undefined,
+          modifiedTime: new Date(post.updatedAt).toISOString(),
+        },
       },
     );
   } catch {

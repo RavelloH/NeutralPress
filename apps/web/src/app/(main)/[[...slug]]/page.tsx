@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
@@ -131,6 +131,12 @@ async function renderMainPage(slug: string[] | undefined) {
   const match = await getMatchingPage(slug);
   if (!match) return notFound();
   const { page, params: resolvedParams } = match;
+
+  // The first page has a single canonical URL; do not serve /page/1 as a 200.
+  if (resolvedParams.page === 1 && resolvedParams.url.endsWith("/page/1")) {
+    permanentRedirect(resolvedParams.url.slice(0, -"/page/1".length) || "/");
+  }
+
   const isHomePage = resolvedParams.url === "/";
   const [latestPostsForJsonLd, mainMenus] = await Promise.all([
     isHomePage ? getLatestPublishedPostsForJsonLd(10) : Promise.resolve([]),

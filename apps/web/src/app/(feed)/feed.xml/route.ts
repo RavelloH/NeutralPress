@@ -76,7 +76,14 @@ async function generateRssFeed(): Promise<string | null> {
     image: `${siteConfig.url}/icon/512x`,
     favicon: `${siteConfig.url}/favicon.ico`,
     copyright: `All rights reserved ${new Date().getFullYear()}, ${siteConfig.author}`,
-    updated: posts.length > 0 ? new Date(posts[0]!.updatedAt) : new Date(),
+    updated:
+      posts.length > 0
+        ? new Date(
+            Math.max(
+              ...posts.map((post) => new Date(post.updatedAt).getTime()),
+            ),
+          )
+        : new Date(),
     generator: "NeutralPress",
     feedLinks: {
       atom: `${siteConfig.url}/feed.xml`,

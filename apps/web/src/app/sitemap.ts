@@ -31,7 +31,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const addEntry = (
     pathname: string,
-    lastModified: Date,
+    lastModified: Date | undefined,
     changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"],
     priority: number,
   ) => {
@@ -40,13 +40,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     entries.set(url, {
       url,
-      lastModified,
+      ...(lastModified ? { lastModified } : {}),
       changeFrequency,
       priority,
     });
   };
 
-  addEntry("/", new Date(), "daily", 1);
+  // Use content timestamps, not sitemap generation time, for the homepage.
+  // The homepage can change when its page definition or recent content changes.
+  const homepageCandidates = [
+    ...pages.filter((page) => page.slug === "/").map((page) => page.updatedAt),
+    ...posts.slice(0, 10).map((post) => post.updatedAt),
+    ...projects.slice(0, 8).map((project) => project.updatedAt),
+  ];
+  const latestHomepageTimestamp = Math.max(
+    0,
+    ...homepageCandidates.map((date) => date.getTime()),
+  );
+  addEntry(
+    "/",
+    latestHomepageTimestamp > 0 ? new Date(latestHomepageTimestamp) : undefined,
+    "daily",
+    1,
+  );
 
   for (const post of posts) {
     addEntry(`/posts/${post.slug}`, post.updatedAt, "weekly", 0.7);

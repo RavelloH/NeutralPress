@@ -64,7 +64,6 @@ const STATIC_METADATA = {
     other: { me: [""] },
   },
   other: {
-    "msapplication-config": "/browserconfig.xml",
     "mobile-web-app-capable": "yes",
   },
 };
@@ -602,6 +601,7 @@ const FORCE_NOINDEX_PREFIXES = [
   "/notifications",
   "/reauth",
   "/settings",
+  "/search",
 ] as const;
 
 function extractPathnameForRule(pathname: string): string {
@@ -1384,7 +1384,15 @@ export function serializeJsonLdGraph(graph: JsonLdGraph): string {
 // 生成动态SEO配置的异步函数
 export async function generateMetadata(
   overrides: Partial<ExtendedMetadata> = {},
-  options?: { pathname?: string; seoParams?: SeoTemplateParams },
+  options?: {
+    pathname?: string;
+    seoParams?: SeoTemplateParams;
+    article?: {
+      publishedTime?: string;
+      modifiedTime?: string;
+      authors?: string[];
+    };
+  },
 ): Promise<Metadata> {
   // 批量获取所有需要的配置
   const [
@@ -1541,8 +1549,15 @@ export async function generateMetadata(
       },
     },
     openGraph: {
-      type: "website",
-      locale: "zh-CN",
+      ...(options?.article
+        ? {
+            type: "article" as const,
+            publishedTime: options.article.publishedTime,
+            modifiedTime: options.article.modifiedTime,
+            authors: options.article.authors,
+          }
+        : { type: "website" as const }),
+      locale: "zh_CN",
       title: resolvedTitle,
       description: resolvedDescription,
       siteName: appName || title || undefined,
