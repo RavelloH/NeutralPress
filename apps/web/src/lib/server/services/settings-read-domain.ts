@@ -9,7 +9,6 @@ import { GetSettingsSchema } from "@repo/shared-types/api/setting";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
-import { isSensitiveConfigKey } from "@/data/default-configs";
 import { authVerify } from "@/lib/server/auth-verify";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
@@ -74,9 +73,7 @@ export async function getSettings(
       .filter((config) => !config.key.startsWith("secret."))
       .map((config) => ({
         key: config.key,
-        value: isSensitiveConfigKey(config.key)
-          ? { default: "" }
-          : config.value,
+        value: config.value,
         updatedAt: config.updatedAt.toISOString(),
       }));
 

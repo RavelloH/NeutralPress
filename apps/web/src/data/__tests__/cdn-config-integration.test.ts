@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  CONFIG_DEFINITIONS,
-  defaultConfigs,
-  extractInputAttributes,
-  isSensitiveConfigKey,
-} from "@/data/default-configs";
+import { CONFIG_DEFINITIONS, defaultConfigs } from "@/data/default-configs";
 
 describe("CDN uses the canonical CONFIG_DEFINITIONS system", () => {
   it("declares all public and private keys in defaultConfigs", () => {
@@ -22,15 +17,14 @@ describe("CDN uses the canonical CONFIG_DEFINITIONS system", () => {
     }
   });
 
-  it("classifies the token as sensitive without requiring encryption", () => {
-    expect(isSensitiveConfigKey("cdn.cloudflare.purgeToken")).toBe(true);
-    expect(isSensitiveConfigKey("cdn.cloudflare.zoneId")).toBe(false);
-    expect(isSensitiveConfigKey("secret.existingKey")).toBe(true);
-    expect(
-      extractInputAttributes(CONFIG_DEFINITIONS["cdn.cloudflare.purgeToken"]),
-    ).toMatchObject({ type: "password" });
+  it("treats the token exactly as an ordinary editable string setting", () => {
+    const token = CONFIG_DEFINITIONS["cdn.cloudflare.purgeToken"];
+    const regularToken = CONFIG_DEFINITIONS["comment.akismet.apiKey"];
+    expect(typeof token.default).toBe(typeof regularToken.default);
+    expect("meta" in token).toBe(false);
     expect(
       defaultConfigs.find((v) => v.key === "cdn.cloudflare.purgeToken")?.value,
     ).toEqual({ default: "" });
+    expect(token.description).not.toContain("明文存入 Config");
   });
 });

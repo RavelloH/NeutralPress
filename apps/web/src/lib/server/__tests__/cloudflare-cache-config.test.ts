@@ -6,7 +6,6 @@ vi.mock("server-only", () => ({}));
 const mock = vi.hoisted(() => ({
   findMany: vi.fn(),
   getConfigs: vi.fn(),
-  getSensitiveConfigValue: vi.fn(),
 }));
 
 vi.mock("@/lib/server/prisma", () => ({
@@ -14,7 +13,6 @@ vi.mock("@/lib/server/prisma", () => ({
 }));
 vi.mock("@/lib/server/config-cache", () => ({
   getConfigs: mock.getConfigs,
-  getSensitiveConfigValue: mock.getSensitiveConfigValue,
 }));
 
 import {
@@ -32,12 +30,12 @@ describe("Cloudflare CDN canonical Config integration", () => {
     mock.getConfigs.mockResolvedValue([
       ZONE,
       "https://example.com",
+      TOKEN,
       "https://example.com",
     ]);
-    mock.getSensitiveConfigValue.mockResolvedValue(TOKEN);
   });
 
-  it("uses standard getConfigs and private Config accessor when new keys exist", async () => {
+  it("reads Token together with all other ordinary Config values", async () => {
     mock.findMany.mockResolvedValue([{ key: "cdn.cloudflare.zoneId" }]);
     expect(await getCloudflareCacheCredentials()).toEqual({
       zone: ZONE,
@@ -48,16 +46,19 @@ describe("Cloudflare CDN canonical Config integration", () => {
     expect(mock.getConfigs).toHaveBeenCalledWith([
       "cdn.cloudflare.zoneId",
       "cdn.cloudflare.siteUrl",
+      "cdn.cloudflare.purgeToken",
       "site.url",
     ]);
-    expect(mock.getSensitiveConfigValue).toHaveBeenCalledWith(
-      "cdn.cloudflare.purgeToken",
-    );
   });
 
   it("does not silently use previous secrets when standard config is incomplete", async () => {
     mock.findMany.mockResolvedValue([{ key: "cdn.cloudflare.zoneId" }]);
-    mock.getSensitiveConfigValue.mockResolvedValue("");
+    mock.getConfigs.mockResolvedValue([
+      ZONE,
+      "https://example.com",
+      "",
+      "https://example.com",
+    ]);
     expect(await getCloudflareCacheCredentials()).toBeNull();
     expect(mock.findMany).toHaveBeenCalledTimes(1);
   });
@@ -76,7 +77,6 @@ describe("Cloudflare CDN canonical Config integration", () => {
       siteUrl: "https://ravelloh.com",
       source: "legacy",
     });
-    expect(mock.getSensitiveConfigValue).not.toHaveBeenCalled();
   });
 
   it("never reads legacy environment variables on a fresh installation", async () => {

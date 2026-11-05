@@ -11,7 +11,6 @@ import {
   closePrismaScriptRuntime,
   createPrismaScriptRuntime,
 } from "@/../scripts/load-prisma-client";
-import { isSensitiveConfigKey } from "@/data/default-configs";
 
 const rlog = new RLog();
 
@@ -80,7 +79,7 @@ async function generateConfigCache(options?: {
       // Credentials stored in Config (e.g. CDN tokens) are runtime-only.
       // Never copy secret.* rows into build snapshots or deployment artifacts.
       configs
-        .filter((config: { key: string }) => !isSensitiveConfigKey(config.key))
+        .filter((config: { key: string }) => !config.key.startsWith("secret."))
         .forEach(
           (config: {
             key: string;

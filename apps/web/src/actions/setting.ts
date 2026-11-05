@@ -55,7 +55,6 @@ import {
   extractOptions,
   extractValidationRules,
   getConfigDefinition,
-  isSensitiveConfigKey,
 } from "@/data/default-configs";
 
 /*
@@ -210,11 +209,6 @@ export async function updateSettings(
     // Generic string constraints come from CONFIG_DEFINITIONS, not a
     // per-integration endpoint or parallel schema.
     if (typeof newValue === "string") {
-      if (isSensitiveConfigKey(setting.key) && newValue.length === 0) {
-        return response.badRequest({
-          message: "敏感配置留空表示保持原值；请输入新值后再保存。",
-        });
-      }
       if (
         validationRules?.pattern &&
         !new RegExp(validationRules.pattern).test(newValue)
@@ -291,16 +285,14 @@ export async function updateSettings(
       const oldData: Record<string, unknown> = {
         settings: sanitizedSettings.map((s) => ({
           key: s.key,
-          oldValue: isSensitiveConfigKey(s.key)
-            ? "[REDACTED]"
-            : oldValuesMap.get(s.key) || null,
+          oldValue: oldValuesMap.get(s.key) || null,
         })),
       };
 
       const newData: Record<string, unknown> = {
         settings: sanitizedSettings.map((s) => ({
           key: s.key,
-          newValue: isSensitiveConfigKey(s.key) ? "[REDACTED]" : s.value,
+          newValue: s.value,
         })),
       };
 

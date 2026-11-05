@@ -9,7 +9,7 @@ import type {
   ConfigKeys,
   ConfigType,
 } from "@/data/default-configs";
-import { defaultConfigMap, isSensitiveConfigKey } from "@/data/default-configs";
+import { defaultConfigMap } from "@/data/default-configs";
 
 // 配置对象类型定义
 export interface ConfigItem {
@@ -39,7 +39,7 @@ const CACHE_FILE_PATH = path.join(
  */
 export async function getRawConfig(key: string): Promise<ConfigItem | null> {
   // 检查是否为敏感配置
-  if (isSensitiveConfigKey(key)) {
+  if (key.startsWith("secret.")) {
     throw Error("无法获取敏感配置项");
   }
 
@@ -182,31 +182,6 @@ export async function getConfigs<T extends ConfigKeys[]>(
 }
 
 /**
- * Trusted server-side integrations only: sensitive Config values are read
- * directly from the existing table (no Data Cache, build snapshot or client).
- */
-export async function getSensitiveConfigValue(key: string): Promise<string> {
-  if (!isSensitiveConfigKey(key)) {
-    throw new Error("Expected a sensitive Config key");
-  }
-  const { default: prisma } = await import("./prisma");
-  const record = await prisma.config.findUnique({
-    where: { key },
-    select: { value: true },
-  });
-  const value = record?.value;
-  if (
-    value &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    "default" in value
-  ) {
-    return typeof value.default === "string" ? value.default : "";
-  }
-  return typeof value === "string" ? value : "";
-}
-
-/**
  * 从数据库获取配置
  */
 async function getConfigFromDatabase(key: string): Promise<ConfigItem | null> {
@@ -320,7 +295,7 @@ function filterSensitiveConfigs(
 
   Object.entries(configs).forEach(([key, config]) => {
     // 跳过 secret 开头的敏感配置
-    if (isSensitiveConfigKey(key)) {
+    if (key.startsWith("secret.")) {
       return;
     }
 

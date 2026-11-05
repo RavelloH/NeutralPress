@@ -23,7 +23,6 @@ export interface ConfigInputAttributes {
   max?: number;
   step?: number;
   tips?: string;
-  type?: "text" | "password";
 }
 
 export interface ConfigValidationRules {
@@ -36,7 +35,6 @@ export interface ConfigValidationRules {
 }
 
 export interface ConfigMeta {
-  sensitive?: boolean;
   options?: ConfigOption[];
   input?: ConfigInputAttributes;
   validation?: ConfigValidationRules;
@@ -882,13 +880,7 @@ export const CONFIG_DEFINITIONS = {
   },
   "cdn.cloudflare.purgeToken": {
     default: "",
-    description:
-      "Cloudflare Cache Purge Token。输入新 Token 时更新；留空保留已有值。按现有项目约定明文存入 Config。",
-    meta: {
-      sensitive: true,
-      input: { type: "password" },
-      validation: { minLength: 20, maxLength: 4096 },
-    },
+    description: "Cloudflare Cache Purge Token，用于清除站点 CDN 缓存。",
   },
 
   // =====================================
@@ -958,17 +950,6 @@ export function getConfigDefinition(key: string) {
   }
 
   return CONFIG_DEFINITIONS[key as ConfigKeys];
-}
-
-/** Common classification for Config readers, snapshots and audit logging. */
-export function isSensitiveConfigKey(key: string): boolean {
-  if (key.startsWith("secret.")) return true;
-  const definition = getConfigDefinition(key);
-  return Boolean(
-    definition &&
-      "meta" in definition &&
-      (definition.meta as ConfigMeta)?.sensitive === true,
-  );
 }
 
 /**

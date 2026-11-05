@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getConfigs, getSensitiveConfigValue } from "@/lib/server/config-cache";
+import { getConfigs } from "@/lib/server/config-cache";
 import prisma from "@/lib/server/prisma";
 
 const STANDARD_KEYS = [
@@ -38,9 +38,8 @@ export function normalizeCloudflareSiteUrl(value: string): string {
 }
 
 /**
- * The existing Config reader owns public field values and tag invalidation;
- * one server-only Config reader owns plaintext sensitive fields. No parallel
- * write endpoint, database, encryption layer or bespoke settings UI.
+ * Cloudflare settings use the same Config reader and invalidation tags as
+ * other ordinary settings.
  */
 export async function getCloudflareCacheCredentials(): Promise<CdnCredentials | null> {
   const present = await prisma.config.findMany({
@@ -49,14 +48,14 @@ export async function getCloudflareCacheCredentials(): Promise<CdnCredentials | 
   });
 
   if (present.length > 0) {
-    const [zoneId, originOverride, siteUrlConfig] = await getConfigs([
-      "cdn.cloudflare.zoneId",
-      "cdn.cloudflare.siteUrl",
-      "site.url",
-    ]);
-    const token = (
-      await getSensitiveConfigValue("cdn.cloudflare.purgeToken")
-    ).trim();
+    const [zoneId, originOverride, tokenValue, siteUrlConfig] =
+      await getConfigs([
+        "cdn.cloudflare.zoneId",
+        "cdn.cloudflare.siteUrl",
+        "cdn.cloudflare.purgeToken",
+        "site.url",
+      ]);
+    const token = tokenValue.trim();
     const zone = zoneId.trim();
     if (!/^[a-f0-9]{32}$/i.test(zone) || !token) return null;
     const siteUrl = normalizeCloudflareSiteUrl(
