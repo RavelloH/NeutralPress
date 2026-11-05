@@ -7,6 +7,9 @@ import {
   scheduleCdnCacheRefresh,
 } from "@/lib/server/cdn-cache-pipeline";
 
+// Match the actual route file, including its route group.
+const MAIN_PAGE_ROUTE = "/(main)/[[...slug]]";
+
 /**
  * Immediately expire public Data Cache entries and the affected Full Route Cache.
  *
@@ -20,36 +23,38 @@ export function expireCacheTag(tag: string): void {
   revalidateTag(tag, { expire: 0 });
 
   if (tag === "posts/list") {
-    revalidatePath("/", "page");
-    revalidatePath("/posts", "page");
+    // Concrete URLs must omit `type`; Next appends it to the cache tag when present.
+    revalidatePath("/");
+    revalidatePath("/posts");
+    revalidatePath("/archive");
     revalidatePath("/feed.xml");
     revalidatePath("/feed.json");
     revalidatePath("/sitemap.xml");
-    revalidatePath("/[[...slug]]", "page");
+    revalidatePath(MAIN_PAGE_ROUTE, "page");
   } else if (tag.startsWith("posts/")) {
     revalidatePath(`/posts/${tag.slice("posts/".length)}`);
   } else if (tag === "projects/list") {
-    revalidatePath("/projects", "page");
+    revalidatePath("/projects");
     revalidatePath("/sitemap.xml");
-    revalidatePath("/[[...slug]]", "page");
+    revalidatePath(MAIN_PAGE_ROUTE, "page");
   } else if (tag.startsWith("projects/")) {
     revalidatePath(`/projects/${tag.slice("projects/".length)}`);
   } else if (tag === "pages" || tag.startsWith("pages/")) {
-    revalidatePath("/[[...slug]]", "page");
+    revalidatePath(MAIN_PAGE_ROUTE, "page");
     revalidatePath("/sitemap.xml");
   } else if (tag === "menus" || tag === "config" || tag.startsWith("config/")) {
     revalidatePath("/", "layout");
   } else if (tag === "gallery/list") {
-    revalidatePath("/gallery", "page");
-    revalidatePath("/[[...slug]]", "page");
+    revalidatePath("/gallery");
+    revalidatePath(MAIN_PAGE_ROUTE, "page");
   } else if (tag.startsWith("photos/")) {
     revalidatePath(`/gallery/photo/${tag.slice("photos/".length)}`);
-    revalidatePath("/[[...slug]]", "page");
+    revalidatePath(MAIN_PAGE_ROUTE, "page");
   } else if (tag.startsWith("tags/") || tag.startsWith("categories/")) {
-    revalidatePath("/[[...slug]]", "page");
+    revalidatePath(MAIN_PAGE_ROUTE, "page");
   } else if (tag === "friend-links") {
-    revalidatePath("/friends", "page");
-    revalidatePath("/[[...slug]]", "page");
+    revalidatePath("/friends");
+    revalidatePath(MAIN_PAGE_ROUTE, "page");
   } else if (tag === "users" || tag.startsWith("users/")) {
     revalidatePath("/", "layout");
   }

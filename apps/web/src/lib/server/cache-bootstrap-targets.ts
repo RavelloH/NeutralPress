@@ -29,26 +29,32 @@ const PUBLIC_PROJECT_STATUSES = [
 
 export type RevalidatePathTarget = {
   path: string;
-  type: "page" | "layout";
+  type?: "page" | "layout";
 };
 
 const CRITICAL_REVALIDATE_PATH_TARGETS: RevalidatePathTarget[] = [
+  // Layout targets must match real layout files.
   { path: "/", type: "layout" },
-  { path: "/posts", type: "layout" },
-  { path: "/projects", type: "layout" },
-  { path: "/gallery", type: "layout" },
-  { path: "/admin", type: "layout" },
-  { path: "/", type: "page" },
-  { path: "/posts", type: "page" },
-  { path: "/projects", type: "page" },
-  { path: "/gallery", type: "page" },
-  { path: "/tags", type: "page" },
-  { path: "/categories", type: "page" },
-  { path: "/posts/[slug]", type: "page" },
-  { path: "/projects/[slug]", type: "page" },
-  { path: "/gallery/photo/[slug]", type: "page" },
-  { path: "/user/[uid]", type: "page" },
-  { path: "/[[...slug]]", type: "page" },
+  { path: "/(admin)/admin", type: "layout" },
+  { path: "/(build-in)/gallery", type: "layout" },
+  // Concrete URLs: omit type so revalidatePath targets the exact URL.
+  { path: "/" },
+  { path: "/posts" },
+  { path: "/archive" },
+  { path: "/projects" },
+  { path: "/gallery" },
+  { path: "/tags" },
+  { path: "/categories" },
+  { path: "/friends" },
+  { path: "/feed.xml" },
+  { path: "/feed.json" },
+  { path: "/sitemap.xml" },
+  // Dynamic route patterns: type is required.
+  { path: "/(build-in)/posts/[slug]", type: "page" },
+  { path: "/(build-in)/projects/[slug]", type: "page" },
+  { path: "/(build-in)/gallery/photo/[slug]", type: "page" },
+  { path: "/(account)/user/[uid]", type: "page" },
+  { path: "/(main)/[[...slug]]", type: "page" },
 ];
 
 export function getCriticalRevalidatePathTargets(): RevalidatePathTarget[] {
@@ -56,7 +62,7 @@ export function getCriticalRevalidatePathTargets(): RevalidatePathTarget[] {
   const results: RevalidatePathTarget[] = [];
 
   for (const target of CRITICAL_REVALIDATE_PATH_TARGETS) {
-    const dedupKey = `${target.type}:${target.path}`;
+    const dedupKey = `${target.type ?? "exact"}:${target.path}`;
     if (dedup.has(dedupKey)) continue;
     dedup.add(dedupKey);
     results.push(target);

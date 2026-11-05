@@ -38,17 +38,35 @@ describe("cache-bootstrap-targets", () => {
       expect(targets.length).toBeGreaterThan(0);
     });
 
-    it("每个目标应包含 path 和 type 属性", async () => {
+    it("具体 URL 不设置 type，动态路由和布局目标才设置 type", async () => {
       const { getCriticalRevalidatePathTargets } = await import(
         "@/lib/server/cache-bootstrap-targets"
       );
       const targets = getCriticalRevalidatePathTargets();
+      const byPath = new Map(
+        targets.map((target) => [target.path, target] as const),
+      );
 
       for (const target of targets) {
-        expect(target).toHaveProperty("path");
-        expect(target).toHaveProperty("type");
-        expect(["page", "layout"]).toContain(target.type);
+        expect(typeof target.path).toBe("string");
+        if (target.type !== undefined) {
+          expect(["page", "layout"]).toContain(target.type);
+        }
       }
+
+      for (const path of [
+        "/",
+        "/posts",
+        "/archive",
+        "/projects",
+        "/gallery",
+        "/feed.xml",
+        "/feed.json",
+        "/sitemap.xml",
+      ]) {
+        expect(byPath.get(path)?.type).toBeUndefined();
+      }
+      expect(byPath.get("/(main)/[[...slug]]")?.type).toBe("page");
     });
 
     it("应包含根路径", async () => {
@@ -68,7 +86,9 @@ describe("cache-bootstrap-targets", () => {
       const targets = getCriticalRevalidatePathTargets();
 
       const postsPaths = targets.filter((t) => t.path === "/posts");
-      expect(postsPaths.length).toBeGreaterThanOrEqual(1);
+      expect(postsPaths).toHaveLength(1);
+      expect(postsPaths[0]?.type).toBeUndefined();
+      expect(targets.find((t) => t.path === "/archive")?.type).toBeUndefined();
     });
 
     it("应去重返回", async () => {
@@ -79,7 +99,7 @@ describe("cache-bootstrap-targets", () => {
 
       const dedupCheck = new Set<string>();
       for (const target of targets) {
-        const key = `${target.type}:${target.path}`;
+        const key = `${target.type ?? "exact"}:${target.path}`;
         expect(dedupCheck.has(key)).toBe(false);
         dedupCheck.add(key);
       }

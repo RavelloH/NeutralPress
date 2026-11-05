@@ -23,9 +23,15 @@ describe("event-driven ISR invalidation", () => {
     expect(mocks.revalidateTag).toHaveBeenCalledWith("posts/list", {
       expire: 0,
     });
-    for (const path of ["/", "/posts", "/[[...slug]]"]) {
-      expect(mocks.revalidatePath).toHaveBeenCalledWith(path, "page");
+    for (const path of ["/", "/posts", "/archive"]) {
+      expect(mocks.revalidatePath).toHaveBeenCalledWith(path);
     }
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/(main)/[[...slug]]",
+      "page",
+    );
+    expect(mocks.revalidatePath).not.toHaveBeenCalledWith("/", "page");
+    expect(mocks.revalidatePath).not.toHaveBeenCalledWith("/posts", "page");
     for (const path of ["/feed.xml", "/feed.json", "/sitemap.xml"]) {
       expect(mocks.revalidatePath).toHaveBeenCalledWith(path);
     }
@@ -48,8 +54,11 @@ describe("event-driven ISR invalidation", () => {
     vi.clearAllMocks();
     expireCacheTag("projects/list");
     expect(scheduleCdnMock).toHaveBeenCalledWith(["tag:np-isr-html"]);
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/projects", "page");
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/[[...slug]]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/projects");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/(main)/[[...slug]]",
+      "page",
+    );
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/sitemap.xml");
   });
 
@@ -64,7 +73,7 @@ describe("event-driven ISR invalidation", () => {
 
   it("refreshes gallery and taxonomy pages", () => {
     expireCacheTag("gallery/list");
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/gallery", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/gallery");
     vi.clearAllMocks();
     expireCacheTag("photos/my-photo");
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
@@ -73,7 +82,10 @@ describe("event-driven ISR invalidation", () => {
     expect(scheduleCdnMock).toHaveBeenCalledWith(["/gallery/photo/my-photo"]);
     vi.clearAllMocks();
     expireCacheTag("tags/nextjs");
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/[[...slug]]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/(main)/[[...slug]]",
+      "page",
+    );
   });
 
   it("expires unknown data tags without invalidating unrelated pages", () => {
@@ -89,7 +101,13 @@ describe("event-driven ISR invalidation", () => {
     for (const tag of ["gallery/list", "photos/example", "friend-links"]) {
       vi.clearAllMocks();
       expireCacheTag(tag);
-      expect(mocks.revalidatePath).toHaveBeenCalledWith("/[[...slug]]", "page");
+      expect(mocks.revalidatePath).toHaveBeenCalledWith(
+        "/(main)/[[...slug]]",
+        "page",
+      );
+      if (tag === "friend-links") {
+        expect(mocks.revalidatePath).toHaveBeenCalledWith("/friends");
+      }
     }
   });
 
