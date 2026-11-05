@@ -4,25 +4,105 @@ import { randomUUID } from "node:crypto";
 
 import { after } from "next/server";
 
+import {
+  HTML_CACHE_TAG,
+  isDeniedHtmlPath,
+  normalizeHtmlPath,
+} from "@/lib/server/cdn-html-policy";
 import { getCloudflareCacheCredentials } from "@/lib/server/cloudflare-cache-config";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 
-// Only explicitly audited, anonymous HTML documents may enter shared CDN cache.
-// Do not include /posts/[slug] until protected post access is separately audited.
-export const PUBLIC_HTML_CDN_PATHS = [
-  "/",
-  "/posts",
-  "/projects",
-  "/gallery",
-] as const;
-const ALLOWED_PATHS = new Set<string>(PUBLIC_HTML_CDN_PATHS);
+// Shared public ISR HTML is selected by the origin response, not a path
+// allowlist. The Redis outbox persists exact URL purges and a global HTML tag
+// purge, without invalidating hashed JS/CSS/image assets.
 const QUEUE_KEY = "np:cdn:html-invalidation";
 const LOCK_KEY = "np:cdn:html-invalidation:lock";
 const ORIGIN = "http://127.0.0.1:3000";
 const MAX_PER_PASS = 4;
+const REVOKING_PREFIX = "np:cdn:revoking:";
+const REVOKING_TTL_SECONDS = 900;
+export const ALL_PUBLIC_HTML_JOB = "tag:" + HTML_CACHE_TAG;
 
 export function eligibleCdnPaths(paths: Iterable<string>): string[] {
-  return [...new Set(paths)].filter((path) => ALLOWED_PATHS.has(path)).sort();
+  const result = new Set<string>();
+  for (const original of paths) {
+    if (original === ALL_PUBLIC_HTML_JOB) {
+      result.add(original);
+      continue;
+    }
+    const normalized = normalizeHtmlPath(original);
+    if (normalized && !isDeniedHtmlPath(normalized)) {
+      result.add(normalized);
+    }
+  }
+  return [...result].sort();
+}
+
+function revokingKey(path: string): string {
+  return REVOKING_PREFIX + path;
+}
+
+/**
+ * Blocks a just-revoked public post from being re-cached by the origin while
+ * the administrator is changing its access mode, slug or publication state.
+ */
+export async function isPublicHtmlRevoking(path: string): Promise<boolean> {
+  await ensureRedisConnection();
+  return (await redis.exists(revokingKey(path))) > 0;
+}
+
+/**
+ * Called BEFORE a public article becomes protected, unpublished or renamed:
+ * set a temporary origin cache block first, then hard-purge its old HTML.
+ * If Cloudflare rejects the purge, the mutation must not proceed.
+ */
+export async function beginPublicHtmlRevocation(
+  paths: Iterable<string>,
+): Promise<void> {
+  const allowed = eligibleCdnPaths(paths).filter(
+    (path) => path !== ALL_PUBLIC_HTML_JOB,
+  );
+  if (!allowed.length) return;
+  const auth = await getCloudflareCacheCredentials();
+  if (!auth) return;
+  await ensureRedisConnection();
+  for (const path of allowed) {
+    await redis.set(revokingKey(path), "1", "EX", REVOKING_TTL_SECONDS);
+  }
+  for (let i = 0; i < allowed.length; i += 100) {
+    await purgeUrls(
+      allowed.slice(i, i + 100),
+      auth.zone,
+      auth.token,
+      auth.siteUrl,
+    );
+  }
+}
+
+/**
+ * Called AFTER the DB update and ISR invalidation. A second hard purge
+ * closes the window of any in-flight old public response; do not lift the
+ * temporary origin block until Cloudflare acknowledges the purge.
+ */
+export async function finishPublicHtmlRevocation(
+  paths: Iterable<string>,
+): Promise<void> {
+  const allowed = eligibleCdnPaths(paths).filter(
+    (path) => path !== ALL_PUBLIC_HTML_JOB,
+  );
+  if (!allowed.length) return;
+  const auth = await getCloudflareCacheCredentials();
+  if (!auth) return;
+  for (let i = 0; i < allowed.length; i += 100) {
+    await purgeUrls(
+      allowed.slice(i, i + 100),
+      auth.zone,
+      auth.token,
+      auth.siteUrl,
+    );
+  }
+  await ensureRedisConnection();
+  await redis.del(...allowed.map(revokingKey));
 }
 
 async function enqueue(paths: string[]): Promise<void> {
@@ -37,7 +117,8 @@ async function enqueue(paths: string[]): Promise<void> {
 }
 
 async function warmPage(path: string): Promise<boolean> {
-  // Bypass Cloudflare; the HTTP request after revalidation commits the new ISR.
+  // Permission changes or deletion make the former public URL uncacheable.
+  // Such a path still must be hard-purged, rather than waiting for an ISR HIT.
   for (let attempt = 0; attempt < 3; attempt++) {
     const response = await fetch(ORIGIN + path, {
       method: "GET",
@@ -46,9 +127,14 @@ async function warmPage(path: string): Promise<boolean> {
       signal: AbortSignal.timeout(15000),
     });
     await response.arrayBuffer();
-    if (response.ok && response.headers.get("x-nextjs-cache") === "HIT") {
+    if ([301, 302, 303, 307, 308, 404, 410].includes(response.status))
       return true;
-    }
+    if (
+      response.headers.get("Cloudflare-CDN-Cache-Control")?.includes("no-store")
+    )
+      return true;
+    if (response.ok && response.headers.get("x-nextjs-cache") === "HIT")
+      return true;
   }
   return false;
 }
@@ -77,6 +163,32 @@ async function purgeUrls(
   if (!response.ok || !body.success) {
     throw new Error(
       "Cloudflare purge failed: HTTP " +
+        response.status +
+        ", error codes=" +
+        (body.errors ?? []).map((e) => e.code).join(","),
+    );
+  }
+}
+
+async function purgePublicHtmlTag(zone: string, token: string): Promise<void> {
+  const response = await fetch(
+    "https://api.cloudflare.com/client/v4/zones/" + zone + "/purge_cache",
+    {
+      method: "POST",
+      headers: {
+        authorization: "Bearer " + token,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ tags: [HTML_CACHE_TAG] }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
+    },
+  );
+  const body: { success?: boolean; errors?: Array<{ code: number }> } =
+    await response.json();
+  if (!response.ok || !body.success) {
+    throw new Error(
+      "Cloudflare HTML tag purge failed: HTTP " +
         response.status +
         ", error codes=" +
         (body.errors ?? []).map((e) => e.code).join(","),
@@ -119,15 +231,21 @@ export async function drainCdnCacheQueue(): Promise<{
       const path = jobs[i];
       const score = jobs[i + 1];
       if (path === undefined || score === undefined) continue;
-      if (!ALLOWED_PATHS.has(path)) {
+      if (!eligibleCdnPaths([path]).includes(path)) {
         await redis.zrem(QUEUE_KEY, path);
         continue;
       }
       try {
-        if (!(await warmPage(path))) {
-          throw new Error("Origin did not return a regenerated ISR HIT");
+        if (path === ALL_PUBLIC_HTML_JOB) {
+          await purgePublicHtmlTag(auth.zone, auth.token);
+        } else {
+          if (!(await warmPage(path))) {
+            throw new Error(
+              "Origin did not return regenerated ISR or a safe uncached response",
+            );
+          }
+          await purgeUrls([path], auth.zone, auth.token, auth.siteUrl);
         }
-        await purgeUrls([path], auth.zone, auth.token, auth.siteUrl);
         await redis.eval(
           "local n=redis.call('ZSCORE',KEYS[1],ARGV[1]); " +
             "if n and tonumber(n)<=tonumber(ARGV[2]) then return redis.call('ZREM',KEYS[1],ARGV[1]) end return 0",

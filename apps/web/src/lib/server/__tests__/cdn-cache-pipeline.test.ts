@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => {
     zcard: vi.fn(async () => 0),
     zrange: vi.fn(async () => ["/", "1000"]),
     zrem: vi.fn(async () => 1),
+    exists: vi.fn(async () => 0),
+    del: vi.fn(async () => 1),
     eval: vi.fn(async () => 1),
   };
   return {
@@ -32,8 +34,11 @@ vi.mock("@/lib/server/redis", () => ({
 }));
 
 import {
+  ALL_PUBLIC_HTML_JOB,
+  beginPublicHtmlRevocation,
   drainCdnCacheQueue,
   eligibleCdnPaths,
+  finishPublicHtmlRevocation,
   scheduleCdnCacheRefresh,
 } from "@/lib/server/cdn-cache-pipeline";
 
@@ -50,18 +55,27 @@ describe("CDN cache invalidation pipeline", () => {
     vi.unstubAllGlobals();
   });
 
-  it("only accepts explicit public HTML allowlist routes", () => {
+  it("accepts canonical public HTML paths and the global tag, but rejects private paths", () => {
     expect(
       eligibleCdnPaths([
         "/admin",
         "/",
-        "/posts/secret",
+        "/posts/example",
         "/posts",
-        "/",
+        "/gallery/photo/pic",
         "/gallery",
         "/messages",
+        "/posts/example",
+        ALL_PUBLIC_HTML_JOB,
       ]),
-    ).toEqual(["/", "/gallery", "/posts"]);
+    ).toEqual([
+      "/",
+      "/gallery",
+      "/gallery/photo/pic",
+      "/posts",
+      "/posts/example",
+      ALL_PUBLIC_HTML_JOB,
+    ]);
   });
 
   it("never starts CDN work without both scoped credentials", async () => {
@@ -74,6 +88,115 @@ describe("CDN cache invalidation pipeline", () => {
       completed: 0,
       configured: false,
     });
+  });
+
+  it("purges only tagged HTML across all public ISR pages", async () => {
+    configMock.mockResolvedValue({
+      zone: "zone",
+      token: "token",
+      siteUrl: "https://example.com",
+      source: "config",
+    });
+    mocks.redis.zrange.mockResolvedValueOnce([ALL_PUBLIC_HTML_JOB, "1000"]);
+    const requests: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, options?: { body?: string }) => {
+        requests.push(options?.body ?? "");
+        return { ok: true, status: 200, json: async () => ({ success: true }) };
+      }),
+    );
+    const result = await drainCdnCacheQueue();
+    expect(result.completed).toBe(1);
+    expect(requests).toEqual([JSON.stringify({ tags: ["np-isr-html"] })]);
+  });
+
+  it("holds a revoked URL before purging and releases only after a second purge", async () => {
+    configMock.mockResolvedValue({
+      zone: "zone",
+      token: "token",
+      siteUrl: "https://example.com",
+      source: "config",
+    });
+    const purged: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: { body?: string }) => {
+        purged.push(init?.body ?? "");
+        return { ok: true, status: 200, json: async () => ({ success: true }) };
+      }),
+    );
+    await beginPublicHtmlRevocation(["/posts/old"]);
+    expect(mocks.redis.set).toHaveBeenCalledWith(
+      "np:cdn:revoking:/posts/old",
+      "1",
+      "EX",
+      900,
+    );
+    expect(mocks.redis.del).not.toHaveBeenCalled();
+    await finishPublicHtmlRevocation(["/posts/old"]);
+    expect(mocks.redis.del).toHaveBeenCalledWith("np:cdn:revoking:/posts/old");
+    expect(purged).toEqual([
+      JSON.stringify({ files: ["https://example.com/posts/old"] }),
+      JSON.stringify({ files: ["https://example.com/posts/old"] }),
+    ]);
+  });
+
+  it("fails the initial revoke when Cloudflare is unavailable", async () => {
+    configMock.mockResolvedValue({
+      zone: "zone",
+      token: "token",
+      siteUrl: "https://example.com",
+      source: "config",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 503,
+        json: async () => ({ success: false, errors: [] }),
+      })),
+    );
+    await expect(
+      beginPublicHtmlRevocation(["/posts/protected"]),
+    ).rejects.toThrow("Cloudflare purge failed");
+    expect(mocks.redis.del).not.toHaveBeenCalled();
+  });
+
+  it("hard-purges a now-private URL even when the origin has no ISR HIT", async () => {
+    configMock.mockResolvedValue({
+      zone: "zone",
+      token: "token",
+      siteUrl: "https://example.com",
+      source: "config",
+    });
+    mocks.redis.zrange.mockResolvedValueOnce(["/posts/former-public", "1000"]);
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, options?: { body?: string }) => {
+        calls.push(url);
+        if (url.startsWith("http://127.0.0.1")) {
+          return {
+            status: 200,
+            ok: true,
+            arrayBuffer: async () => new ArrayBuffer(0),
+            headers: {
+              get: (key: string) =>
+                key === "Cloudflare-CDN-Cache-Control"
+                  ? "private, no-store"
+                  : null,
+            },
+          };
+        }
+        expect(JSON.parse(options!.body!)).toEqual({
+          files: ["https://example.com/posts/former-public"],
+        });
+        return { ok: true, status: 200, json: async () => ({ success: true }) };
+      }),
+    );
+    expect((await drainCdnCacheQueue()).completed).toBe(1);
+    expect(calls).toHaveLength(2);
   });
 
   it("persists mutation, confirms origin HIT, purges the exact public URL", async () => {

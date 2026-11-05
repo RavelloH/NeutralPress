@@ -53,6 +53,10 @@ import { TextVersion } from "text-version";
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { verifyToken } from "@/lib/server/captcha";
+import {
+  beginPublicHtmlRevocation,
+  finishPublicHtmlRevocation,
+} from "@/lib/server/cdn-cache-pipeline";
 import { getConfig } from "@/lib/server/config-cache";
 import { generateSignature } from "@/lib/server/image-crypto";
 import { expireCacheTag as updateTag } from "@/lib/server/isr-invalidation";
@@ -2217,6 +2221,23 @@ export async function updatePost(
     // 如果 categories === undefined，则保持原有分类不变
 
     // 更新文章 - 使用事务处理 mediaRefs
+    const shouldRevokePublicHtml =
+      existingPost.accessMode === "PUBLIC" &&
+      (existingPost.status === "PUBLISHED" ||
+        existingPost.status === "ARCHIVED") &&
+      (normalizedAccess.accessMode !== "PUBLIC" ||
+        status === "DRAFT" ||
+        (newSlug !== undefined && newSlug !== existingPost.slug));
+    const revocationPaths = shouldRevokePublicHtml
+      ? [
+          "/posts/" + existingPost.slug,
+          ...(newSlug && newSlug !== existingPost.slug
+            ? ["/posts/" + newSlug]
+            : []),
+        ]
+      : [];
+    await beginPublicHtmlRevocation(revocationPaths);
+
     const updatedPost = await prisma.$transaction(async (tx) => {
       // 1. 如果需要更新 mediaRefs，先删除相关引用
       if (needUpdateMediaRefs) {
@@ -2526,6 +2547,10 @@ export async function updatePost(
       updateTag("categories/list");
     }
 
+    // Do not acknowledge access/slug downgrade until the new public HTML
+    // cache is hard-purged and the temporary origin hold is removed.
+    await finishPublicHtmlRevocation(revocationPaths);
+
     return response.ok({
       data: {
         id: updatedPost.id,
@@ -2738,6 +2763,17 @@ export async function updatePosts(
       }
     }
 
+    const bulkRevocationPaths =
+      status === "DRAFT"
+        ? postsBeforeUpdate
+            .filter(
+              (post) =>
+                post.status === "PUBLISHED" || post.status === "ARCHIVED",
+            )
+            .map((post) => "/posts/" + post.slug)
+        : [];
+    await beginPublicHtmlRevocation(bulkRevocationPaths);
+
     // 执行批量更新
     const updateWhereCondition: {
       id: { in: number[] };
@@ -2895,6 +2931,8 @@ export async function updatePosts(
       updateTag("posts/list");
     }
 
+    await finishPublicHtmlRevocation(bulkRevocationPaths);
+
     return response.ok({
       data: { updated: result.count },
     });
@@ -3015,6 +3053,13 @@ export async function deletePosts(
       await addAdjacentPublishedPostSlugs(postDetailTagsToRefresh, post);
     }
 
+    const deletedPublicPaths = postsToDelete
+      .filter(
+        (post) => post.status === "PUBLISHED" || post.status === "ARCHIVED",
+      )
+      .map((post) => "/posts/" + post.slug);
+    await beginPublicHtmlRevocation(deletedPublicPaths);
+
     const result = await prisma.post.updateMany({
       where: deleteWhereCondition,
       data: {
@@ -3067,6 +3112,8 @@ export async function deletePosts(
       updateTag("tags/list");
       updateTag("categories/list");
     }
+
+    await finishPublicHtmlRevocation(deletedPublicPaths);
 
     return response.ok({
       data: { deleted: result.count },

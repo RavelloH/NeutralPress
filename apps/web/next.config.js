@@ -274,20 +274,20 @@ const nextConfig = () => {
       ];
     },
     // 配置缓存头
-    // Only known public HTML routes receive a Cloudflare-specific CDN policy.
-    // This never applies to protected posts, user pages, routes or APIs.
+    // All HTML is private by default. Proxy explicitly marks verified public
+    // ISR pages with the shared 60s Cloudflare policy and Cache-Tag.
     async headers() {
       return [
-        ...["/", "/posts", "/projects", "/gallery"].map((source) => ({
-          source,
+        {
+          source: "/:path*",
+          has: [{ type: "header", key: "accept", value: ".*text/html.*" }],
           headers: [
             {
               key: "Cloudflare-CDN-Cache-Control",
-              value:
-                "public, max-age=60, stale-while-revalidate=60, stale-if-error=60",
+              value: "private, no-store",
             },
           ],
-        })),
+        },
         {
           source: "/favicon.ico",
           headers: [

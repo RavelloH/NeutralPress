@@ -2,7 +2,10 @@ import "server-only";
 
 import { revalidatePath, revalidateTag } from "next/cache";
 
-import { scheduleCdnCacheRefresh } from "@/lib/server/cdn-cache-pipeline";
+import {
+  ALL_PUBLIC_HTML_JOB,
+  scheduleCdnCacheRefresh,
+} from "@/lib/server/cdn-cache-pipeline";
 
 /**
  * Immediately expire public Data Cache entries and the affected Full Route Cache.
@@ -51,25 +54,38 @@ export function expireCacheTag(tag: string): void {
     revalidatePath("/", "layout");
   }
 
-  // The CDN is deliberately more restrictive than the ISR cache.
-  if (tag === "posts/list") {
-    scheduleCdnCacheRefresh(["/", "/posts"]);
-  } else if (tag === "projects/list") {
-    scheduleCdnCacheRefresh(["/", "/projects"]);
-  } else if (
+  // Every public ISR page carries the same Cloudflare HTML cache tag.
+  // One tag purge invalidates all dependent public HTML, including custom
+  // pages and pagination, without evicting immutable JS/CSS. Detail URLs are
+  // additionally hard-purged for previously cached, untagged content.
+  const exactPaths: string[] = [];
+  if (tag.startsWith("posts/") && tag !== "posts/list") {
+    exactPaths.push("/posts/" + tag.slice("posts/".length));
+  } else if (tag.startsWith("projects/") && tag !== "projects/list") {
+    exactPaths.push("/projects/" + tag.slice("projects/".length));
+  } else if (tag.startsWith("photos/")) {
+    exactPaths.push("/gallery/photo/" + tag.slice("photos/".length));
+  }
+
+  if (
+    tag === "posts/list" ||
+    tag === "projects/list" ||
     tag === "gallery/list" ||
     tag === "friend-links" ||
     tag === "pages" ||
-    tag.startsWith("pages/")
-  ) {
-    scheduleCdnCacheRefresh(["/", "/gallery"]);
-  } else if (
+    tag.startsWith("pages/") ||
     tag === "menus" ||
     tag === "config" ||
     tag.startsWith("config/") ||
     tag === "users" ||
-    tag.startsWith("users/")
+    tag.startsWith("users/") ||
+    tag === "tags/list" ||
+    tag.startsWith("tags/") ||
+    tag === "categories/list" ||
+    tag.startsWith("categories/")
   ) {
-    scheduleCdnCacheRefresh(["/", "/posts", "/projects", "/gallery"]);
+    scheduleCdnCacheRefresh([ALL_PUBLIC_HTML_JOB, ...exactPaths]);
+  } else if (exactPaths.length) {
+    scheduleCdnCacheRefresh(exactPaths);
   }
 }
