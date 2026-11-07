@@ -3,14 +3,18 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { handleSSOBind, handleSSOCallback } from "@/actions/sso";
+import { getConfig } from "@/lib/server/config-cache";
 import { jwtTokenVerify } from "@/lib/server/jwt";
 import { type OAuthProvider } from "@/lib/server/oauth";
+import { resolveOAuthRedirectUrl } from "@/lib/server/oauth-redirect";
 import limitControl from "@/lib/server/rate-limit";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ provider: string }> },
 ) {
+  const siteUrl = await getConfig("site.url");
+
   // 速率限制检查
   if (!(await limitControl(await headers(), "sso_callback"))) {
     const cookieStore = await cookies();
@@ -21,7 +25,9 @@ export async function GET(
       path: "/",
       secure: process.env.NODE_ENV === "production",
     });
-    return NextResponse.redirect(new URL("/login?sso=error", request.url));
+    return NextResponse.redirect(
+      resolveOAuthRedirectUrl("/login?sso=error", siteUrl),
+    );
   }
 
   const { provider } = await params;
@@ -45,7 +51,9 @@ export async function GET(
       path: "/",
       secure: process.env.NODE_ENV === "production",
     });
-    return NextResponse.redirect(new URL("/login?sso=error", request.url));
+    return NextResponse.redirect(
+      resolveOAuthRedirectUrl("/login?sso=error", siteUrl),
+    );
   }
 
   // 缺少必要参数
@@ -57,7 +65,9 @@ export async function GET(
       path: "/",
       secure: process.env.NODE_ENV === "production",
     });
-    return NextResponse.redirect(new URL("/login?sso=error", request.url));
+    return NextResponse.redirect(
+      resolveOAuthRedirectUrl("/login?sso=error", siteUrl),
+    );
   }
 
   // 读取模式标识
@@ -83,9 +93,9 @@ export async function GET(
       )?.value;
       if (!reauthTokenCookie) {
         return NextResponse.redirect(
-          new URL(
+          resolveOAuthRedirectUrl(
             `/reauth?error=${encodeURIComponent("验证失败：缺少认证信息")}`,
-            request.url,
+            siteUrl,
           ),
         );
       }
@@ -103,9 +113,9 @@ export async function GET(
         reauthTokenPayload.provider !== provider
       ) {
         return NextResponse.redirect(
-          new URL(
+          resolveOAuthRedirectUrl(
             `/reauth?error=${encodeURIComponent("验证失败：认证信息无效")}`,
-            request.url,
+            siteUrl,
           ),
         );
       }
@@ -124,9 +134,9 @@ export async function GET(
         cookieStore.delete(`oauth_reauth_token_${provider}`);
 
         return NextResponse.redirect(
-          new URL(
+          resolveOAuthRedirectUrl(
             `/reauth?error=${encodeURIComponent("验证失败：缺少 state")}`,
-            request.url,
+            siteUrl,
           ),
         );
       }
@@ -152,9 +162,9 @@ export async function GET(
         cookieStore.delete(`oauth_reauth_token_${provider}`);
 
         return NextResponse.redirect(
-          new URL(
+          resolveOAuthRedirectUrl(
             `/reauth?error=${encodeURIComponent("验证失败：state 不匹配")}`,
-            request.url,
+            siteUrl,
           ),
         );
       }
@@ -178,11 +188,11 @@ export async function GET(
         cookieStore.delete(`oauth_reauth_token_${provider}`);
 
         return NextResponse.redirect(
-          new URL(
+          resolveOAuthRedirectUrl(
             `/reauth?error=${encodeURIComponent(
               error instanceof Error ? error.message : "OAuth 验证失败",
             )}`,
-            request.url,
+            siteUrl,
           ),
         );
       }
@@ -203,9 +213,9 @@ export async function GET(
 
       if (!result.success) {
         return NextResponse.redirect(
-          new URL(
+          resolveOAuthRedirectUrl(
             `/reauth?error=${encodeURIComponent(result.message || "验证失败")}`,
-            request.url,
+            siteUrl,
           ),
         );
       }
@@ -213,9 +223,9 @@ export async function GET(
       // Reauth 成功，重定向回 /reauth 页面
       // 页面会通过 BroadcastChannel 通知父窗口并关闭自己
       return NextResponse.redirect(
-        new URL(
+        resolveOAuthRedirectUrl(
           `/reauth?success=${encodeURIComponent("验证成功")}`,
-          request.url,
+          siteUrl,
         ),
       );
     } else if (mode === "bind") {
@@ -229,9 +239,9 @@ export async function GET(
 
       if (!result.success) {
         return NextResponse.redirect(
-          new URL(
+          resolveOAuthRedirectUrl(
             `/settings?error=${encodeURIComponent(result.message || "绑定失败")}`,
-            request.url,
+            siteUrl,
           ),
         );
       }
@@ -254,9 +264,9 @@ export async function GET(
 
       // 跳转到目标页面
       return NextResponse.redirect(
-        new URL(
+        resolveOAuthRedirectUrl(
           `${redirectTo}?success=${encodeURIComponent(result.message)}`,
-          request.url,
+          siteUrl,
         ),
       );
     } else {
@@ -281,7 +291,9 @@ export async function GET(
           path: "/",
           secure: process.env.NODE_ENV === "production",
         });
-        return NextResponse.redirect(new URL("/login?sso=error", request.url));
+        return NextResponse.redirect(
+          resolveOAuthRedirectUrl("/login?sso=error", siteUrl),
+        );
       }
 
       const { action, userInfo } = result.data!;
@@ -311,7 +323,7 @@ export async function GET(
 
         // ACCESS_TOKEN 和 REFRESH_TOKEN 已经在 handleSSOCallback 中设置
         return NextResponse.redirect(
-          new URL("/login?sso=success", request.url),
+          resolveOAuthRedirectUrl("/login?sso=success", siteUrl),
         );
       } else {
         // 未知的 action
@@ -322,7 +334,9 @@ export async function GET(
           path: "/",
           secure: process.env.NODE_ENV === "production",
         });
-        return NextResponse.redirect(new URL("/login?sso=error", request.url));
+        return NextResponse.redirect(
+          resolveOAuthRedirectUrl("/login?sso=error", siteUrl),
+        );
       }
     }
   } catch (error) {
@@ -338,17 +352,17 @@ export async function GET(
     if (mode === "bind") {
       cookieStore.delete(`oauth_bind_token_${provider}`);
       return NextResponse.redirect(
-        new URL(
+        resolveOAuthRedirectUrl(
           `/settings?error=${encodeURIComponent(errorMessage)}`,
-          request.url,
+          siteUrl,
         ),
       );
     } else if (mode === "reauth") {
       cookieStore.delete(`oauth_reauth_token_${provider}`);
       return NextResponse.redirect(
-        new URL(
+        resolveOAuthRedirectUrl(
           `/reauth?error=${encodeURIComponent(errorMessage)}`,
-          request.url,
+          siteUrl,
         ),
       );
     } else {
@@ -359,7 +373,9 @@ export async function GET(
         path: "/",
         secure: process.env.NODE_ENV === "production",
       });
-      return NextResponse.redirect(new URL("/login?sso=error", request.url));
+      return NextResponse.redirect(
+        resolveOAuthRedirectUrl("/login?sso=error", siteUrl),
+      );
     }
   }
 }

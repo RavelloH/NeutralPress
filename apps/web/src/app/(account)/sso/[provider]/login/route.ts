@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import { getConfig } from "@/lib/server/config-cache";
 import {
   type AccessTokenPayload,
   jwtTokenSign,
@@ -13,18 +14,21 @@ import {
   isOAuthEnabled,
   type OAuthProvider,
 } from "@/lib/server/oauth";
+import { resolveOAuthRedirectUrl } from "@/lib/server/oauth-redirect";
 import limitControl from "@/lib/server/rate-limit";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ provider: string }> },
 ) {
+  const siteUrl = await getConfig("site.url");
+
   // 速率限制检查
   if (!(await limitControl(await headers(), "sso_login"))) {
     return NextResponse.redirect(
-      new URL(
+      resolveOAuthRedirectUrl(
         `/login?error=${encodeURIComponent("请求过于频繁，请稍后再试")}`,
-        request.url,
+        siteUrl,
       ),
     );
   }
@@ -41,14 +45,20 @@ export async function GET(
     const accessToken = cookieStore.get("ACCESS_TOKEN")?.value;
     if (!accessToken) {
       return NextResponse.redirect(
-        new URL(`/login?error=${encodeURIComponent("请先登录")}`, request.url),
+        resolveOAuthRedirectUrl(
+          `/login?error=${encodeURIComponent("请先登录")}`,
+          siteUrl,
+        ),
       );
     }
 
     const currentUser = jwtTokenVerify<AccessTokenPayload>(accessToken);
     if (!currentUser) {
       return NextResponse.redirect(
-        new URL(`/login?error=${encodeURIComponent("请先登录")}`, request.url),
+        resolveOAuthRedirectUrl(
+          `/login?error=${encodeURIComponent("请先登录")}`,
+          siteUrl,
+        ),
       );
     }
 
@@ -58,9 +68,9 @@ export async function GET(
     if (!hasReauthToken) {
       // 没有 REAUTH_TOKEN，重定向到 settings 页面，由前端处理 reauth
       return NextResponse.redirect(
-        new URL(
+        resolveOAuthRedirectUrl(
           `/settings?error=${encodeURIComponent("需要重新验证身份")}&trigger_reauth=bind_sso&provider=${provider}`,
-          request.url,
+          siteUrl,
         ),
       );
     }
@@ -91,14 +101,20 @@ export async function GET(
     const accessToken = cookieStore.get("ACCESS_TOKEN")?.value;
     if (!accessToken) {
       return NextResponse.redirect(
-        new URL(`/login?error=${encodeURIComponent("请先登录")}`, request.url),
+        resolveOAuthRedirectUrl(
+          `/login?error=${encodeURIComponent("请先登录")}`,
+          siteUrl,
+        ),
       );
     }
 
     const currentUser = jwtTokenVerify<AccessTokenPayload>(accessToken);
     if (!currentUser) {
       return NextResponse.redirect(
-        new URL(`/login?error=${encodeURIComponent("请先登录")}`, request.url),
+        resolveOAuthRedirectUrl(
+          `/login?error=${encodeURIComponent("请先登录")}`,
+          siteUrl,
+        ),
       );
     }
 
@@ -127,9 +143,9 @@ export async function GET(
   if (!validProviders.includes(provider as OAuthProvider)) {
     const redirectUrl = mode === "bind" ? "/settings" : "/login";
     return NextResponse.redirect(
-      new URL(
+      resolveOAuthRedirectUrl(
         `${redirectUrl}?error=${encodeURIComponent("不支持的登录方式")}`,
-        request.url,
+        siteUrl,
       ),
     );
   }
@@ -141,9 +157,9 @@ export async function GET(
   if (!enabled) {
     const redirectUrl = mode === "bind" ? "/settings" : "/login";
     return NextResponse.redirect(
-      new URL(
+      resolveOAuthRedirectUrl(
         `${redirectUrl}?error=${encodeURIComponent(`${provider.toUpperCase()} 登录未启用`)}`,
-        request.url,
+        siteUrl,
       ),
     );
   }
@@ -230,9 +246,9 @@ export async function GET(
     console.error("SSO login error:", error);
     const redirectUrl = mode === "bind" ? "/settings" : "/login";
     return NextResponse.redirect(
-      new URL(
+      resolveOAuthRedirectUrl(
         `${redirectUrl}?error=${encodeURIComponent(error instanceof Error ? error.message : "登录失败")}`,
-        request.url,
+        siteUrl,
       ),
     );
   }
