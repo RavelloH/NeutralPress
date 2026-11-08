@@ -168,6 +168,10 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
 
 参考 [https://neutralpress.net/docs/deploy](https://neutralpress.net/docs/deploy)
 
+## 一键部署
+
+[![Deploy on RepoCloud](https://d16t0pc4846x52.cloudfront.net/deploylobe.svg)](https://repocloud.io/details/NeutralPress/)
+
 ## 贡献
 
 NeutralPress 是一个开源项目，欢迎任何人参与贡献代码、文档、设计等。
