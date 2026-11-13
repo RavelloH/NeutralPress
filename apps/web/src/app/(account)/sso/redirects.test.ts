@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET as callbackGET } from "@/app/(account)/sso/[provider]/callback/route";
 import { GET as loginGET } from "@/app/(account)/sso/[provider]/login/route";
+import { verifyAccessToken } from "@/lib/server/auth-verify";
 
-const { mockGetConfig, mockCookieSet } = vi.hoisted(() => ({
+const { mockGetConfig, mockCookieSet, mockCookieGet } = vi.hoisted(() => ({
   mockGetConfig: vi.fn(),
   mockCookieSet: vi.fn(),
+  mockCookieGet: vi.fn(),
 }));
 
 vi.mock("@/lib/server/config-cache", () => ({
@@ -15,7 +17,7 @@ vi.mock("@/lib/server/config-cache", () => ({
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
-    get: vi.fn(() => undefined),
+    get: mockCookieGet,
     set: mockCookieSet,
   })),
   headers: vi.fn(async () => new Headers()),
@@ -35,9 +37,14 @@ vi.mock("@/lib/server/jwt", () => ({
   jwtTokenSign: vi.fn(),
 }));
 
+vi.mock("@/lib/server/auth-verify", () => ({
+  verifyAccessToken: vi.fn(async () => null),
+}));
+
 describe("SSO 跳转使用已配置的公网域名", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCookieGet.mockReturnValue(undefined);
     mockGetConfig.mockResolvedValue("https://ravelloh.com");
   });
 
@@ -89,4 +96,22 @@ describe("SSO 跳转使用已配置的公网域名", () => {
       "https://ravelloh.com",
     );
   });
+  it.each(["bind", "reauth"])(
+    "%s 模式拒绝已失效会话的访问令牌",
+    async (mode) => {
+      mockCookieGet.mockImplementation((name: string) =>
+        name === "ACCESS_TOKEN" ? { value: "revoked-access-token" } : undefined,
+      );
+      const response = await loginGET(
+        new NextRequest(`https://localhost:3000/sso/github/login?mode=${mode}`),
+        { params: Promise.resolve({ provider: "github" }) },
+      );
+
+      expect(verifyAccessToken).toHaveBeenCalledWith("revoked-access-token");
+      const location = new URL(response.headers.get("location")!);
+      expect(location.origin).toBe("https://ravelloh.com");
+      expect(location.pathname).toBe("/login");
+      expect(mockCookieSet).not.toHaveBeenCalled();
+    },
+  );
 });

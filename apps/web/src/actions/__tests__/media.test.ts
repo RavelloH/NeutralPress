@@ -1173,7 +1173,21 @@ describe("media actions", () => {
             systemType: "NORMAL",
             userUid: 1,
             path: "1/10",
+            parentId: 1,
           });
+          if (user.role === "AUTHOR") {
+            mockPrismaVirtualFolderFindUnique.mockReset();
+            mockPrismaVirtualFolderFindUnique
+              .mockResolvedValueOnce({
+                id: 10,
+                name: "测试文件夹",
+                systemType: "NORMAL",
+                userUid: 1,
+                path: "1/10",
+                parentId: 1,
+              })
+              .mockResolvedValueOnce(ROOT_PUBLIC_FOLDER);
+          }
           mockPrismaVirtualFolderFindMany.mockResolvedValue([
             {
               id: 1,
@@ -1189,6 +1203,90 @@ describe("media actions", () => {
           );
           expect((result as any).success).toBe(true);
         }
+      });
+
+      it("AUTHOR 只能访问本人 USER_HOME，且不能伪造客户端身份", async () => {
+        mockAuthSuccess(AUTHOR_USER);
+        mockPrismaVirtualFolderFindUnique.mockReset();
+        mockPrismaVirtualFolderFindUnique
+          .mockResolvedValueOnce({
+            id: 4,
+            name: "其他用户的私密目录",
+            systemType: "USER_HOME",
+            userUid: 1,
+            path: "2/4",
+            parentId: 2,
+          })
+          .mockResolvedValueOnce(ROOT_USERS_FOLDER);
+
+        const result = await getFolderBreadcrumb(
+          {
+            access_token: "token",
+            folderId: 4,
+            userRole: "ADMIN",
+            userUid: 1,
+          } as any,
+          { environment: "serveraction" },
+        );
+
+        expect((result as any).success).toBe(false);
+        expect(JSON.stringify(result)).not.toContain("其他用户的私密目录");
+      });
+
+      it("AUTHOR 可以访问本人 USER_HOME", async () => {
+        mockAuthSuccess(AUTHOR_USER);
+        mockPrismaVirtualFolderFindUnique.mockReset();
+        mockPrismaVirtualFolderFindUnique
+          .mockResolvedValueOnce({
+            id: 3,
+            name: "我的文件夹",
+            systemType: "USER_HOME",
+            userUid: AUTHOR_USER.uid,
+            path: "2/3",
+            parentId: 2,
+          })
+          .mockResolvedValueOnce(ROOT_USERS_FOLDER);
+
+        const result = await getFolderBreadcrumb(
+          { access_token: "token", folderId: 3 },
+          { environment: "serveraction" },
+        );
+
+        expect((result as any).success).toBe(true);
+      });
+
+      it("AUTHOR 的祖先链超过 128 个节点时停止查询", async () => {
+        mockAuthSuccess(AUTHOR_USER);
+        mockPrismaVirtualFolderFindUnique.mockImplementation(
+          async ({ where: { id } }: { where: { id: number } }) => {
+            if (id === 1000) {
+              return {
+                id,
+                name: "深层目录",
+                systemType: "NORMAL",
+                userUid: AUTHOR_USER.uid,
+                path: "",
+                parentId: 999,
+              };
+            }
+            return {
+              id,
+              name: "父目录",
+              systemType: "NORMAL",
+              userUid: AUTHOR_USER.uid,
+              parentId: id - 1,
+            };
+          },
+        );
+
+        const result = await getFolderBreadcrumb(
+          { access_token: "token", folderId: 1000 },
+          { environment: "serveraction" },
+        );
+
+        expect((result as any).success).toBe(false);
+        expect(mockPrismaVirtualFolderFindUnique).toHaveBeenCalledTimes(128);
+        expect(JSON.stringify(result)).not.toContain("深层目录");
       });
     });
 

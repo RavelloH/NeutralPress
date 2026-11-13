@@ -10,12 +10,49 @@ vi.mock("next/headers", () => ({
 
 // Mock jwt 模块
 const mockJwtTokenVerify = vi.fn();
+const mockRefreshTokenFindUnique = vi.fn();
 vi.mock("@/lib/server/jwt", () => ({
   jwtTokenVerify: (...args: unknown[]) => mockJwtTokenVerify(...args),
 }));
+vi.mock("@/lib/server/prisma", () => ({
+  default: {
+    refreshToken: {
+      findUnique: (...args: unknown[]) => mockRefreshTokenFindUnique(...args),
+    },
+  },
+}));
+
+function mockValidAccessToken(payload: {
+  uid: number;
+  username: string;
+  nickname: string;
+  role?: string;
+  iat: number;
+  exp: number;
+}) {
+  Object.assign(payload, {
+    type: "access",
+    sessionId: `session-${payload.uid}`,
+  });
+  mockJwtTokenVerify.mockReturnValue(payload);
+  mockRefreshTokenFindUnique.mockResolvedValue({
+    userUid: payload.uid,
+    expiresAt: new Date(Date.now() + 60_000),
+    revokedAt: null,
+    user: {
+      uid: payload.uid,
+      username: payload.username,
+      nickname: payload.nickname,
+      role: payload.role || "USER",
+      status: "ACTIVE",
+      deletedAt: null,
+    },
+  });
+}
 
 describe("auth-verify", () => {
   let authVerify: typeof import("@/lib/server/auth-verify").authVerify;
+  let verifyAccessToken: typeof import("@/lib/server/auth-verify").verifyAccessToken;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -23,6 +60,7 @@ describe("auth-verify", () => {
 
     const mod = await import("@/lib/server/auth-verify");
     authVerify = mod.authVerify;
+    verifyAccessToken = mod.verifyAccessToken;
   });
 
   // ==========================================================================
@@ -39,7 +77,7 @@ describe("auth-verify", () => {
         iat: 1,
         exp: 9999,
       };
-      mockJwtTokenVerify.mockReturnValue(mockPayload);
+      mockValidAccessToken(mockPayload);
 
       const result = await authVerify({
         allowedRoles: ["USER"],
@@ -61,7 +99,7 @@ describe("auth-verify", () => {
         iat: 1,
         exp: 9999,
       };
-      mockJwtTokenVerify.mockReturnValue(mockPayload);
+      mockValidAccessToken(mockPayload);
       mockCookiesGet.mockReturnValue({ value: "cookie-token" });
 
       const result = await authVerify({
@@ -82,7 +120,7 @@ describe("auth-verify", () => {
         iat: 1,
         exp: 9999,
       };
-      mockJwtTokenVerify.mockReturnValue(mockPayload);
+      mockValidAccessToken(mockPayload);
       mockCookiesGet.mockReturnValue({ value: "fallback-token" });
 
       const result = await authVerify({
@@ -152,7 +190,7 @@ describe("auth-verify", () => {
         iat: 1,
         exp: 9999,
       };
-      mockJwtTokenVerify.mockReturnValue(mockPayload);
+      mockValidAccessToken(mockPayload);
 
       const result = await authVerify({
         allowedRoles: ["EDITOR", "ADMIN"],
@@ -171,7 +209,7 @@ describe("auth-verify", () => {
         iat: 1,
         exp: 9999,
       };
-      mockJwtTokenVerify.mockReturnValue(mockPayload);
+      mockValidAccessToken(mockPayload);
 
       const result = await authVerify({
         allowedRoles: ["ADMIN", "EDITOR"],
@@ -190,7 +228,7 @@ describe("auth-verify", () => {
         iat: 1,
         exp: 9999,
       };
-      mockJwtTokenVerify.mockReturnValue(mockPayload);
+      mockValidAccessToken(mockPayload);
 
       const result = await authVerify({
         allowedRoles: [],
@@ -209,7 +247,7 @@ describe("auth-verify", () => {
         iat: 1,
         exp: 9999,
       };
-      mockJwtTokenVerify.mockReturnValue(mockPayload);
+      mockValidAccessToken(mockPayload);
 
       const result = await authVerify({
         allowedRoles: ["AUTHOR"],
@@ -231,7 +269,7 @@ describe("auth-verify", () => {
           iat: 1,
           exp: 9999,
         };
-        mockJwtTokenVerify.mockReturnValue(mockPayload);
+        mockValidAccessToken(mockPayload);
 
         const result = await authVerify({
           allowedRoles: [...roles],
@@ -248,7 +286,7 @@ describe("auth-verify", () => {
   // ==========================================================================
 
   describe("边界情况", () => {
-    it("token 有效但角色字段缺失时应返回 null", async () => {
+    it("缺少 access 类型时应返回 null", async () => {
       const mockPayload = {
         uid: 1,
         username: "norole",
@@ -256,7 +294,10 @@ describe("auth-verify", () => {
         iat: 1,
         exp: 9999,
       };
-      mockJwtTokenVerify.mockReturnValue(mockPayload as any);
+      mockJwtTokenVerify.mockReturnValue({
+        ...mockPayload,
+        sessionId: "session-1",
+      });
 
       const result = await authVerify({
         allowedRoles: ["USER"],
@@ -275,7 +316,7 @@ describe("auth-verify", () => {
         iat: 1,
         exp: 9999,
       };
-      mockJwtTokenVerify.mockReturnValue(mockPayload);
+      mockValidAccessToken(mockPayload);
       // cookies.get 返回单个 cookie 对象
       mockCookiesGet.mockReturnValue({ value: "first-token" });
 
@@ -285,6 +326,115 @@ describe("auth-verify", () => {
 
       expect(mockJwtTokenVerify).toHaveBeenCalledWith("first-token");
       expect(result).toEqual(mockPayload);
+    });
+  });
+
+  describe("数据库会话状态", () => {
+    it("撤销、过期、缺失或用户不匹配的会话必须拒绝", async () => {
+      const payload = {
+        uid: 7,
+        username: "user",
+        nickname: "User",
+        role: "ADMIN",
+        iat: 1,
+        exp: 9999,
+      };
+      mockValidAccessToken(payload);
+
+      for (const invalidSession of [
+        null,
+        {
+          userUid: 7,
+          expiresAt: new Date(Date.now() + 60_000),
+          revokedAt: new Date(),
+          user: {
+            uid: 7,
+            username: "user",
+            nickname: "User",
+            role: "ADMIN",
+            status: "ACTIVE",
+            deletedAt: null,
+          },
+        },
+        {
+          userUid: 8,
+          expiresAt: new Date(Date.now() + 60_000),
+          revokedAt: null,
+          user: {
+            uid: 8,
+            username: "other",
+            nickname: null,
+            role: "ADMIN",
+            status: "ACTIVE",
+            deletedAt: null,
+          },
+        },
+      ]) {
+        mockRefreshTokenFindUnique.mockResolvedValueOnce(invalidSession);
+        expect(await verifyAccessToken("access-token")).toBeNull();
+      }
+    });
+
+    it("用户禁用或软删除后拒绝，且返回数据库当前角色", async () => {
+      mockJwtTokenVerify.mockReturnValue({
+        uid: 9,
+        username: "stale-name",
+        nickname: "stale",
+        role: "ADMIN",
+        type: "access",
+        sessionId: "session-9",
+        iat: 1,
+        exp: 9999,
+      });
+
+      mockRefreshTokenFindUnique.mockResolvedValueOnce({
+        userUid: 9,
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: null,
+        user: {
+          uid: 9,
+          username: "current-name",
+          nickname: null,
+          role: "USER",
+          status: "ACTIVE",
+          deletedAt: null,
+        },
+      });
+      expect(await verifyAccessToken("access-token")).toMatchObject({
+        username: "current-name",
+        nickname: "current-name",
+        role: "USER",
+      });
+
+      mockRefreshTokenFindUnique.mockResolvedValueOnce({
+        userUid: 9,
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: null,
+        user: {
+          uid: 9,
+          username: "current-name",
+          nickname: null,
+          role: "USER",
+          status: "SUSPENDED",
+          deletedAt: null,
+        },
+      });
+      expect(await verifyAccessToken("access-token")).toBeNull();
+
+      mockRefreshTokenFindUnique.mockResolvedValueOnce({
+        userUid: 9,
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: null,
+        user: {
+          uid: 9,
+          username: "current-name",
+          nickname: null,
+          role: "USER",
+          status: "ACTIVE",
+          deletedAt: new Date(),
+        },
+      });
+      expect(await verifyAccessToken("access-token")).toBeNull();
     });
   });
 });

@@ -26,6 +26,7 @@ const mockPrismaAccountFindUnique = vi.fn();
 const mockPrismaAccountCreate = vi.fn();
 const mockPrismaAccountDelete = vi.fn();
 const mockPrismaRefreshTokenCreate = vi.fn();
+const mockPrismaRefreshTokenDelete = vi.fn();
 vi.mock("@/lib/server/prisma", () => ({
   default: {
     user: {
@@ -40,8 +41,16 @@ vi.mock("@/lib/server/prisma", () => ({
     },
     refreshToken: {
       create: (...args: unknown[]) => mockPrismaRefreshTokenCreate(...args),
+      delete: (...args: unknown[]) => mockPrismaRefreshTokenDelete(...args),
     },
   },
+}));
+
+const mockVerifyAccessToken = vi.fn();
+const mockVerifySession = vi.fn();
+vi.mock("@/lib/server/auth-verify", () => ({
+  verifyAccessToken: (...args: unknown[]) => mockVerifyAccessToken(...args),
+  verifySession: (...args: unknown[]) => mockVerifySession(...args),
 }));
 
 const mockJwtTokenSign = vi.fn();
@@ -101,6 +110,22 @@ describe("sso actions", () => {
     mockGetConfigs.mockResolvedValue(["TestSite", "http://localhost:3000"]);
     mockHashPassword.mockResolvedValue("hashed");
     mockJwtTokenSign.mockReturnValue("signed-token");
+    mockVerifyAccessToken.mockResolvedValue({
+      type: "access",
+      uid: 1,
+      sessionId: "session-1",
+      username: "testuser",
+      nickname: "testuser",
+      role: "USER",
+    });
+    mockVerifySession.mockImplementation(
+      async (_sessionId: string, uid: number) => ({
+        uid,
+        username: "testuser",
+        nickname: "testuser",
+        role: "USER",
+      }),
+    );
     mockGetClientIP.mockResolvedValue("127.0.0.1");
     mockGetClientUserAgent.mockResolvedValue("Mozilla/5.0");
 
@@ -385,7 +410,12 @@ describe("sso actions", () => {
         if (callCount === 1) {
           return { state: "state-value", mode: "bind", provider: "google" };
         }
-        return { uid: 1, purpose: "oauth_bind", provider: "google" };
+        return {
+          uid: 1,
+          sessionId: "session-1",
+          purpose: "oauth_bind",
+          provider: "google",
+        };
       });
       mockPrismaUserFindUnique.mockResolvedValue({ uid: 1 });
       mockValidateOAuthCallback.mockResolvedValue({
@@ -412,7 +442,12 @@ describe("sso actions", () => {
         if (callCount === 1) {
           return { state: "state-value", mode: "bind", provider: "google" };
         }
-        return { uid: 1, purpose: "oauth_bind", provider: "google" };
+        return {
+          uid: 1,
+          sessionId: "session-1",
+          purpose: "oauth_bind",
+          provider: "google",
+        };
       });
       mockPrismaUserFindUnique.mockResolvedValue({ uid: 1 });
       mockValidateOAuthCallback.mockResolvedValue({

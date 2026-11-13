@@ -19,13 +19,10 @@ vi.mock("@/lib/server/rate-limit", () => ({
 }));
 
 const mockAuthVerify = vi.fn();
+const mockVerifyAccessToken = vi.fn();
 vi.mock("@/lib/server/auth-verify", () => ({
   authVerify: (...args: unknown[]) => mockAuthVerify(...args),
-}));
-
-const mockJwtTokenVerify = vi.fn();
-vi.mock("@/lib/server/jwt", () => ({
-  jwtTokenVerify: (...args: unknown[]) => mockJwtTokenVerify(...args),
+  verifyAccessToken: (...args: unknown[]) => mockVerifyAccessToken(...args),
 }));
 
 const mockPrisma = {
@@ -156,13 +153,13 @@ describe("notice actions", () => {
     });
 
     it("未登录时应返回未授权", async () => {
-      mockJwtTokenVerify.mockReturnValue(null);
+      mockVerifyAccessToken.mockResolvedValue(null);
       const result = await markNoticesAsRead(["n1"]);
       expect(result.success).toBe(false);
     });
 
     it("成功标记通知已读", async () => {
-      mockJwtTokenVerify.mockReturnValue({ uid: 1 });
+      mockVerifyAccessToken.mockResolvedValue({ uid: 1 });
       mockPrisma.notice.updateMany.mockResolvedValue({ count: 2 });
       mockPrisma.notice.count.mockResolvedValue(1);
       mockPublishNoticeToUser.mockResolvedValue(true);
@@ -183,13 +180,13 @@ describe("notice actions", () => {
     });
 
     it("未登录时应返回未授权", async () => {
-      mockJwtTokenVerify.mockReturnValue(null);
+      mockVerifyAccessToken.mockResolvedValue(null);
       const result = await markAllNoticesAsRead();
       expect(result.success).toBe(false);
     });
 
     it("成功标记全部已读", async () => {
-      mockJwtTokenVerify.mockReturnValue({ uid: 1 });
+      mockVerifyAccessToken.mockResolvedValue({ uid: 1 });
       mockPrisma.notice.updateMany.mockResolvedValue({ count: 5 });
       mockPublishNoticeToUser.mockResolvedValue(true);
 

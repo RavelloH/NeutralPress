@@ -29,8 +29,10 @@ vi.mock("@/lib/server/rate-limit", () => ({
 }));
 
 const mockAuthVerify = vi.fn();
+const mockVerifySession = vi.fn();
 vi.mock("@/lib/server/auth-verify", () => ({
   authVerify: (...args: unknown[]) => mockAuthVerify(...args),
+  verifySession: (...args: unknown[]) => mockVerifySession(...args),
 }));
 
 const mockGetConfig = vi.fn();
@@ -49,6 +51,7 @@ const mockPrismaPasskeyCreate = vi.fn();
 const mockPrismaPasskeyUpdate = vi.fn();
 const mockPrismaPasskeyDelete = vi.fn();
 const mockPrismaRefreshTokenCreate = vi.fn();
+const mockPrismaRefreshTokenDelete = vi.fn();
 vi.mock("@/lib/server/prisma", () => ({
   default: {
     user: {
@@ -65,6 +68,7 @@ vi.mock("@/lib/server/prisma", () => ({
     },
     refreshToken: {
       create: (...args: unknown[]) => mockPrismaRefreshTokenCreate(...args),
+      delete: (...args: unknown[]) => mockPrismaRefreshTokenDelete(...args),
     },
   },
 }));
@@ -136,6 +140,14 @@ describe("passkey actions", () => {
       username: "test",
       role: "USER",
     });
+    mockVerifySession.mockImplementation(
+      async (_sessionId: string, uid: number) => ({
+        uid,
+        username: "test",
+        nickname: "test",
+        role: "USER",
+      }),
+    );
     mockCheckReauthToken.mockResolvedValue(true);
     mockGetConfig.mockResolvedValue(true);
     mockGetConfigs.mockResolvedValue(["http://localhost:3000", "TestSite"]);

@@ -1,6 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+
+const { mockFetchPublicHttpUrlBuffer } = vi.hoisted(() => ({
+  mockFetchPublicHttpUrlBuffer: vi.fn(),
+}));
 
 // Mock config-cache
 const mockGetConfig = vi.fn();
@@ -44,6 +48,7 @@ vi.mock("@/lib/server/analytics-flush", () => ({
 
 // Mock url-security
 vi.mock("@/lib/server/url-security", () => ({
+  fetchPublicHttpUrlBuffer: mockFetchPublicHttpUrlBuffer,
   assertPublicHttpUrl: vi
     .fn()
     .mockResolvedValue({ url: new URL("https://example.com") }),
@@ -90,9 +95,17 @@ vi.mock(".prisma/client", () => ({
   },
 }));
 
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe("cron-task-runner", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 200 })),
+    );
 
     mockGetConfig.mockResolvedValue("https://example.com");
     mockGetConfigs.mockResolvedValue(Array(13).fill(30));
@@ -362,6 +375,54 @@ describe("cron-task-runner", () => {
       expect(result).toHaveProperty("failed");
       expect(result).toHaveProperty("results");
       expect(Array.isArray(result.results)).toBe(true);
+    });
+
+    it("使用公共 URL 受控抓取并限制大小、超时和重定向", async () => {
+      const prisma = (await import("@/lib/server/prisma")).default;
+      const link = {
+        id: 1,
+        name: "示例友链",
+        url: "https://friend.example/page",
+        friendLinkUrl: null,
+        ignoreBacklink: false,
+        status: "PUBLISHED",
+        checkSuccessCount: 0,
+        checkFailureCount: 0,
+        avgResponseTime: null,
+        checkHistory: [],
+        publishedAt: null,
+      };
+      (prisma as any).friendLink = {
+        findMany: vi.fn().mockResolvedValue([link]),
+        update: vi.fn().mockResolvedValue({ status: "PUBLISHED" }),
+      };
+      mockGetConfigs.mockResolvedValue([
+        false,
+        false,
+        "https://neutralpress.example",
+      ]);
+      mockFetchPublicHttpUrlBuffer.mockResolvedValue({
+        status: 200,
+        headers: new Headers(),
+        body: Buffer.from("ok"),
+        finalUrl: link.url,
+      });
+
+      const { runFriendLinksCheck } = await import(
+        "@/lib/server/cron-task-runner"
+      );
+      const result = await runFriendLinksCheck({ checkAll: true, ids: [] });
+
+      expect(result.checked).toBe(1);
+      expect(mockFetchPublicHttpUrlBuffer).toHaveBeenCalledWith(link.url, {
+        method: "GET",
+        timeoutMs: 10000,
+        maxBytes: 2 * 1024 * 1024,
+        maxRedirects: 3,
+        headers: {
+          "User-Agent": "NeutralPress FriendLinkChecker/1.0",
+        },
+      });
     });
   });
 

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import UserProfileClient from "@/components/client/features/user/UserProfileClient";
 import ViewCountBatchLoader from "@/components/client/logic/ViewCountBatchLoader";
-import { type AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
+import { verifyAccessToken } from "@/lib/server/auth-verify";
 import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
 import { getUserPublicProfile } from "@/lib/server/services/user-domain";
 
@@ -85,7 +85,7 @@ export default async function UserProfilePage({
   // 获取当前登录用户（可能为空）
   const cookieStore = await cookies();
   const token = cookieStore.get("ACCESS_TOKEN")?.value;
-  const currentUser = token ? jwtTokenVerify<AccessTokenPayload>(token) : null;
+  const currentUser = token ? await verifyAccessToken(token) : null;
   const isGuest = !currentUser;
 
   // 获取用户档案

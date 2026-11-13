@@ -2,8 +2,7 @@ import { cookies } from "next/headers";
 
 import ForbiddenPage from "@/app/forbidden";
 import UnauthorizedPage from "@/app/unauthorized";
-import type { AccessTokenPayload } from "@/lib/server/jwt";
-import { jwtTokenVerify } from "@/lib/server/jwt";
+import { verifyAccessToken } from "@/lib/server/auth-verify";
 
 const allowedRoles = ["ADMIN", "EDITOR"];
 
@@ -19,7 +18,7 @@ export default async function TagsLayout({
     return <UnauthorizedPage />;
   }
 
-  const user = jwtTokenVerify<AccessTokenPayload>(token);
+  const user = await verifyAccessToken(token);
 
   if (!user) {
     return <UnauthorizedPage />;

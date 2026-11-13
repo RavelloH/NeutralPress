@@ -11,7 +11,9 @@ interface TokenSignOptions {
 }
 
 export type AccessTokenPayload = {
+  type: "access";
   uid: number;
+  sessionId: string;
   username: string;
   nickname: string;
   role: string;
@@ -29,6 +31,8 @@ export type RefreshTokenPayload = {
 export type TotpTokenPayload = {
   uid: number;
   type: "totp_verification";
+  purpose: "login" | "reauth";
+  sessionId?: string;
   iat: number;
   exp: number;
 };

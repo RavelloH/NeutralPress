@@ -2,12 +2,9 @@ import { cookies, headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import { verifyAccessToken } from "@/lib/server/auth-verify";
 import { getConfig } from "@/lib/server/config-cache";
-import {
-  type AccessTokenPayload,
-  jwtTokenSign,
-  jwtTokenVerify,
-} from "@/lib/server/jwt";
+import { jwtTokenSign } from "@/lib/server/jwt";
 import {
   generateState,
   getAuthorizationUrl,
@@ -52,7 +49,7 @@ export async function GET(
       );
     }
 
-    const currentUser = jwtTokenVerify<AccessTokenPayload>(accessToken);
+    const currentUser = await verifyAccessToken(accessToken);
     if (!currentUser) {
       return NextResponse.redirect(
         resolveOAuthRedirectUrl(
@@ -80,6 +77,7 @@ export async function GET(
     const bindToken = jwtTokenSign({
       inner: {
         uid: currentUser.uid,
+        sessionId: currentUser.sessionId,
         purpose: "oauth_bind",
         provider,
       },
@@ -108,7 +106,7 @@ export async function GET(
       );
     }
 
-    const currentUser = jwtTokenVerify<AccessTokenPayload>(accessToken);
+    const currentUser = await verifyAccessToken(accessToken);
     if (!currentUser) {
       return NextResponse.redirect(
         resolveOAuthRedirectUrl(
@@ -122,6 +120,7 @@ export async function GET(
     const reauthToken = jwtTokenSign({
       inner: {
         uid: currentUser.uid,
+        sessionId: currentUser.sessionId,
         purpose: "oauth_reauth",
         provider,
       },

@@ -11,11 +11,8 @@ import type {
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
 
-import {
-  type AccessTokenPayload,
-  jwtTokenVerify,
-  type RefreshTokenPayload,
-} from "@/lib/server/jwt";
+import { verifyAccessToken } from "@/lib/server/auth-verify";
+import { jwtTokenVerify, type RefreshTokenPayload } from "@/lib/server/jwt";
 import prisma from "@/lib/server/prisma";
 import ResponseBuilder from "@/lib/server/response";
 
@@ -61,7 +58,7 @@ export async function getSessions(
       });
     }
 
-    const decodedAccess = jwtTokenVerify<AccessTokenPayload>(accessToken);
+    const decodedAccess = await verifyAccessToken(accessToken);
     if (!decodedAccess) {
       return response.unauthorized({
         message: "未登录",

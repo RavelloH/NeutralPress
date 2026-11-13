@@ -3,7 +3,7 @@ import "server-only";
 import type { ApiResponse } from "@repo/shared-types/api/common";
 import { cookies } from "next/headers";
 
-import { type AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
+import { verifyAccessToken } from "@/lib/server/auth-verify";
 import prisma from "@/lib/server/prisma";
 import ResponseBuilder from "@/lib/server/response";
 export async function getCurrentUserForReauth(): Promise<
@@ -21,7 +21,7 @@ export async function getCurrentUserForReauth(): Promise<
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
-    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
+    const decoded = await verifyAccessToken(token);
 
     if (!decoded) {
       return response.unauthorized({

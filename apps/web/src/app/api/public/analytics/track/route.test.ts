@@ -49,6 +49,41 @@ describe("public analytics tracking JSON POST", () => {
       environment: "serverless",
     });
   });
+  it.each([undefined, "1"])(
+    "读取没有可靠 Content-Length 的超限流时立即停止（%s）",
+    async (contentLength) => {
+      let produced = 0;
+      let canceled = false;
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          produced += 1;
+          controller.enqueue(new Uint8Array(1024));
+          if (produced === 128) controller.close();
+        },
+        cancel() {
+          canceled = true;
+        },
+      });
+      const headers: Record<string, string> = {
+        "content-type": "application/json",
+      };
+      if (contentLength !== undefined) {
+        headers["content-length"] = contentLength;
+      }
+      const response = await POST(
+        new NextRequest("https://example.com/api/public/analytics/track", {
+          method: "POST",
+          headers,
+          body,
+        }),
+      );
+
+      expect(response.status).toBe(413);
+      expect(canceled).toBe(true);
+      expect(produced).toBeLessThan(128);
+      expect(trackPageView).not.toHaveBeenCalled();
+    },
+  );
   it("preserves service rate limit status", async () => {
     vi.mocked(trackPageView).mockResolvedValueOnce(
       NextResponse.json({ success: false }, { status: 429 }) as never,

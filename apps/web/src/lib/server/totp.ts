@@ -369,6 +369,25 @@ export async function incrementTotpFailCount(uid: number): Promise<void> {
   }
 }
 
+/** 为用户原子预留一次 TOTP 验证机会。 */
+export async function reserveTotpAttempt(uid: number): Promise<boolean> {
+  await ensureRedisConnection();
+  const key = generateCacheKey("auth", "totp", "fail", uid);
+  const result = await redis.eval(
+    "local count=tonumber(redis.call('GET',KEYS[1]) or '0'); " +
+      "if count>=tonumber(ARGV[1]) then return 0 end; " +
+      "local next=redis.call('INCR',KEYS[1]); " +
+      "if next==1 then redis.call('EXPIRE',KEYS[1],ARGV[2]) end; " +
+      "return 1",
+    1,
+    key,
+    "3",
+    "300",
+  );
+
+  return Number(result) === 1;
+}
+
 /**
  * 重置 TOTP 验证失败次数
  */

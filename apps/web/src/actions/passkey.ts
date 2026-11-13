@@ -20,7 +20,7 @@ import { after } from "next/server";
 import { UAParser } from "ua-parser-js";
 
 import { logAuditEvent } from "@/lib/server/audit";
-import { authVerify } from "@/lib/server/auth-verify";
+import { authVerify, verifySession } from "@/lib/server/auth-verify";
 import { getConfigs } from "@/lib/server/config-cache";
 import { getClientUserAgent } from "@/lib/server/get-client-info";
 import { jwtTokenSign } from "@/lib/server/jwt";
@@ -547,16 +547,36 @@ export async function verifyPasskeyAuthentication(payload: {
       },
     });
 
+    const activeSessionUser = await verifySession(dbRefreshToken.id, user.uid);
+    if (!activeSessionUser) {
+      await prisma.refreshToken.delete({ where: { id: dbRefreshToken.id } });
+      return response.unauthorized({
+        message: "该账户已被禁用",
+      }) as unknown as ApiResponse<{
+        userInfo: {
+          uid: number;
+          username: string;
+          nickname: string | null;
+          email: string;
+          avatar: string | null;
+          role: string;
+          exp: string;
+        };
+      }>;
+    }
+
     const refreshToken = jwtTokenSign({
       inner: { uid: user.uid, tokenId: dbRefreshToken.id, exp: expiredAtUnix },
       expired: "30d",
     });
     const accessToken = jwtTokenSign({
       inner: {
+        type: "access",
         uid: user.uid,
-        username: user.username,
-        nickname: user.nickname ?? "",
-        role: user.role,
+        sessionId: dbRefreshToken.id,
+        username: activeSessionUser.username,
+        nickname: activeSessionUser.nickname ?? activeSessionUser.username,
+        role: activeSessionUser.role,
       },
       expired: "10m",
     });
@@ -627,7 +647,7 @@ export async function verifyPasskeyAuthentication(payload: {
           nickname: user.nickname ?? null,
           email: user.email,
           avatar: user.avatar ?? null,
-          role: user.role,
+          role: activeSessionUser.role,
           exp: String(expiredAtUnix),
         },
       },

@@ -2,6 +2,11 @@ import "server-only";
 
 import type { NextRequest, NextResponse } from "next/server";
 
+import {
+  readRequestBodyWithLimit,
+  RequestBodyTooLargeError,
+} from "@/lib/server/request-body";
+
 export type ParsedJsonRequest =
   | { ok: true; input: unknown }
   | { ok: false; response: NextResponse };
@@ -23,7 +28,7 @@ function reject(message: string, status = 400): NextResponse {
   ) as NextResponse;
 }
 
-/** Parse small JSON POSTs. Reject cross-site browser requests before touching cookies or services. */
+/** 解析有大小限制的 JSON，并在读取凭据或调用服务前拒绝跨站请求。 */
 export async function parseSameOriginJson(
   request: NextRequest,
   maxBytes: number,
@@ -57,25 +62,16 @@ export async function parseSameOriginJson(
   ) {
     return { ok: false, response: reject("需要 application/json") };
   }
-  const contentLength = request.headers.get("content-length");
-  if (contentLength !== null) {
-    const declared = Number(contentLength);
-    if (
-      !Number.isSafeInteger(declared) ||
-      declared < 0 ||
-      declared > maxBytes
-    ) {
-      return { ok: false, response: reject("请求内容过大", 413) };
-    }
-  }
   let content: string;
   try {
-    content = await request.text();
-  } catch {
+    content = new TextDecoder().decode(
+      await readRequestBodyWithLimit(request, maxBytes),
+    );
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return { ok: false, response: reject("请求内容过大", 413) };
+    }
     return { ok: false, response: reject("请求内容读取失败") };
-  }
-  if (Buffer.byteLength(content, "utf8") > maxBytes) {
-    return { ok: false, response: reject("请求内容过大", 413) };
   }
   let input: unknown;
   try {

@@ -20,13 +20,10 @@ vi.mock("@/lib/server/rate-limit", () => ({
 }));
 
 const mockAuthVerify = vi.fn();
+const mockVerifyAccessToken = vi.fn();
 vi.mock("@/lib/server/auth-verify", () => ({
   authVerify: (...args: unknown[]) => mockAuthVerify(...args),
-}));
-
-const mockJwtTokenVerify = vi.fn();
-vi.mock("@/lib/server/jwt", () => ({
-  jwtTokenVerify: (...args: unknown[]) => mockJwtTokenVerify(...args),
+  verifyAccessToken: (...args: unknown[]) => mockVerifyAccessToken(...args),
 }));
 
 const mockPrisma = {
@@ -47,6 +44,7 @@ const mockPrisma = {
     count: vi.fn(),
   },
   $queryRaw: vi.fn(),
+  $transaction: vi.fn(),
 };
 vi.mock("@/lib/server/prisma", () => ({ default: mockPrisma }));
 
@@ -112,6 +110,17 @@ describe("user actions", () => {
     vi.clearAllMocks();
     vi.resetModules();
     mockLimitControl.mockResolvedValue(true);
+    mockVerifyAccessToken.mockResolvedValue({
+      type: "access",
+      uid: 1,
+      sessionId: "session-1",
+      username: "admin",
+      nickname: "Admin",
+      role: "ADMIN",
+    });
+    mockPrisma.$transaction.mockImplementation(
+      (callback: (tx: typeof mockPrisma) => unknown) => callback(mockPrisma),
+    );
     const mod = await import("@/actions/user");
     getUsersTrends = mod.getUsersTrends;
     getUsersList = mod.getUsersList;
@@ -327,6 +336,13 @@ describe("user actions", () => {
       const result = await deleteUsers({ access_token: "token", uids: [2] });
       expect(result.success).toBe(true);
       expect(result.data!.deleted).toBe(1);
+      expect(mockPrisma.$transaction).toHaveBeenCalledOnce();
+      expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userUid: { in: [2] }, revokedAt: null },
+          data: { revokedAt: expect.any(Date) },
+        }),
+      );
     });
   });
 
@@ -334,20 +350,20 @@ describe("user actions", () => {
 
   describe("getUserProfile", () => {
     it("未登录时应返回未授权", async () => {
-      mockJwtTokenVerify.mockReturnValue(null);
+      mockVerifyAccessToken.mockResolvedValue(null);
       const result = await getUserProfile();
       expect(result.success).toBe(false);
     });
 
     it("用户不存在时应返回未授权", async () => {
-      mockJwtTokenVerify.mockReturnValue({ uid: 99 });
+      mockVerifyAccessToken.mockResolvedValue({ uid: 99 });
       mockPrisma.user.findUnique.mockResolvedValue(null);
       const result = await getUserProfile();
       expect(result.success).toBe(false);
     });
 
     it("成功获取用户资料", async () => {
-      mockJwtTokenVerify.mockReturnValue({ uid: 1 });
+      mockVerifyAccessToken.mockResolvedValue({ uid: 1 });
       mockPrisma.user.findUnique.mockResolvedValue({
         uid: 1,
         username: "admin",
@@ -666,6 +682,27 @@ describe("user actions", () => {
         { environment: "serveraction" },
       );
       expect(result.success).toBe(true);
+    });
+
+    it("停用用户时应在事务内撤销其未撤销会话", async () => {
+      mockAuthSuccess(ADMIN_USER);
+      mockPrisma.user.findMany.mockResolvedValue([
+        { uid: 2, username: "user", role: "USER", status: "ACTIVE" },
+      ]);
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.refreshToken.updateMany.mockResolvedValue({ count: 2 });
+
+      const result = await updateUsers(
+        { access_token: "token", uids: [2], status: "SUSPENDED" },
+        { environment: "serveraction" },
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockPrisma.$transaction).toHaveBeenCalledOnce();
+      expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { userUid: 2, revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
     });
 
     it("批量更新无更新字段时应返回失败", async () => {

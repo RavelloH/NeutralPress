@@ -3,7 +3,7 @@ import "server-only";
 import { readFileSync } from "fs";
 import { join } from "path";
 
-import { type AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
+import { verifyAccessToken } from "@/lib/server/auth-verify";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 
 // 配置常量：基于角色的速率限制
@@ -51,14 +51,14 @@ function extractAccessToken(headers: HeadersObject): string | null {
 }
 
 // 根据用户角色获取速率限制
-function getRateLimitByRole(headers: HeadersObject): number {
+async function getRateLimitByRole(headers: HeadersObject): Promise<number> {
   const token = extractAccessToken(headers);
 
   if (!token) {
     return RATE_LIMITS.GUEST; // 未登录，使用访客限制
   }
 
-  const payload = jwtTokenVerify<AccessTokenPayload>(token);
+  const payload = await verifyAccessToken(token);
 
   if (!payload || !payload.role) {
     return RATE_LIMITS.GUEST; // Token 无效，使用访客限制
@@ -117,7 +117,7 @@ async function limitControl(
     await ensureRedisConnection();
 
     const ip = extractIpAddress(headers);
-    const rateLimit = getRateLimitByRole(headers); // 动态获取速率限制
+    const rateLimit = await getRateLimitByRole(headers); // 动态获取速率限制
     const now = Date.now();
     const currentHour = Math.floor(now / 3600000);
 

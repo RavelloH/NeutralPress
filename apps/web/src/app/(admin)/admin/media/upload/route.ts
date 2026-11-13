@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 
 import {
@@ -12,6 +13,12 @@ import type { NextRequest } from "next/server";
 
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
+import {
+  consumeDirectUploadTicket,
+  createDirectUploadTicket,
+  DIRECT_UPLOAD_MAX_FILE_SIZE_BYTES,
+  DIRECT_UPLOAD_TICKET_TTL_SECONDS,
+} from "@/lib/server/direct-upload";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { generateSignedImageId } from "@/lib/server/image-crypto";
 import {
@@ -22,6 +29,10 @@ import {
 import { buildObjectKey, deleteObject, uploadObject } from "@/lib/server/oss";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
+import {
+  readRequestBodyWithLimit,
+  RequestBodyTooLargeError,
+} from "@/lib/server/request-body";
 import ResponseBuilder from "@/lib/server/response";
 import {
   fetchPublicHttpUrlBuffer,
@@ -32,8 +43,7 @@ import { getOrCreateVirtualStorage } from "@/lib/server/virtual-storage";
 const response = new ResponseBuilder("serverless");
 const DEFAULT_EXTERNAL_MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const EXTERNAL_FETCH_TIMEOUT_MS = 15000;
-const DIRECT_UPLOAD_SIGN_EXPIRES_SECONDS = 600;
-const DIRECT_UPLOAD_TOKEN_EXPIRES_MS = 10 * 60 * 1000;
+const MAX_UPLOAD_REQUEST_BYTES = DIRECT_UPLOAD_MAX_FILE_SIZE_BYTES + 64 * 1024;
 const TEMP_UPLOAD_PATH_TEMPLATE = "temp/{year}/{month}/{filename}";
 type ExternalImportMode = "record" | "transfer";
 type StorageProviderRecord = NonNullable<
@@ -71,8 +81,8 @@ function joinStoragePrefix(prefix: string | undefined, key: string): string {
 function parseUploadFileSize(raw: string | null): number | null {
   if (!raw) return null;
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed < 0) return null;
-  return Math.floor(parsed);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) return null;
+  return parsed;
 }
 
 async function readS3BodyWithLimit(
@@ -81,18 +91,6 @@ async function readS3BodyWithLimit(
 ): Promise<Buffer> {
   if (!body) {
     throw new Error("临时文件内容为空");
-  }
-
-  if (
-    typeof body === "object" &&
-    "transformToByteArray" in body &&
-    typeof body.transformToByteArray === "function"
-  ) {
-    const bytes = await body.transformToByteArray();
-    if (bytes.byteLength > maxBytes) {
-      throw new Error("文件大小超出限制");
-    }
-    return Buffer.from(bytes);
   }
 
   if (
@@ -116,6 +114,20 @@ async function readS3BodyWithLimit(
   }
 
   throw new Error("不支持的临时文件响应格式");
+}
+
+function closeS3Body(body: unknown): void {
+  if (typeof body !== "object" || body === null) return;
+
+  const stream = body as {
+    destroy?: () => void;
+    cancel?: () => Promise<unknown> | void;
+  };
+  if (typeof stream.destroy === "function") {
+    stream.destroy();
+  } else if (typeof stream.cancel === "function") {
+    void Promise.resolve(stream.cancel()).catch(() => undefined);
+  }
 }
 
 /**
@@ -187,8 +199,30 @@ export async function POST(request: NextRequest): Promise<Response> {
       return response.unauthorized() as Response;
     }
 
-    // 解析 multipart/form-data
-    const formData = await request.formData();
+    // 在解析 multipart 前限制整个请求体，包含无 Content-Length 的请求。
+    let formData: FormData;
+    try {
+      const body = await readRequestBodyWithLimit(
+        request,
+        MAX_UPLOAD_REQUEST_BYTES,
+      );
+      const contentType = request.headers.get("content-type");
+      formData = await new Response(body, {
+        headers: contentType ? { "content-type": contentType } : undefined,
+      }).formData();
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return response.response({
+          status: 413,
+          message: "上传请求内容过大",
+          error: {
+            code: "PAYLOAD_TOO_LARGE",
+            message: "上传请求最大允许 50 MiB + 64 KiB",
+          },
+        }) as Response;
+      }
+      throw error;
+    }
     const actionRaw = formData.get("action") as string | null;
     const action = actionRaw?.trim().toLowerCase();
     const mode = (formData.get("mode") as string) || "lossy";
@@ -211,6 +245,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       formData.get("fileSize") as string | null,
     );
     const initContentTypeRaw = (formData.get("contentType") as string | null)
+      ?.split(";")[0]
       ?.trim()
       .toLowerCase();
     const initContentType = initContentTypeRaw || "application/octet-stream";
@@ -218,11 +253,6 @@ export async function POST(request: NextRequest): Promise<Response> {
     const completeOriginalName = (
       formData.get("originalName") as string | null
     )?.trim();
-    const completeOriginalMimeType = (
-      formData.get("originalMimeType") as string | null
-    )
-      ?.trim()
-      .toLowerCase();
 
     // 如果没有指定文件夹，默认使用公共空间根目录
     if (folderId === null) {
@@ -331,6 +361,19 @@ export async function POST(request: NextRequest): Promise<Response> {
         }) as Response;
       }
 
+      if (
+        initFileSize <= 0 ||
+        initFileSize > DIRECT_UPLOAD_MAX_FILE_SIZE_BYTES
+      ) {
+        return response.badRequest({
+          message: "文件大小必须大于 0 且不超过 50 MiB",
+          error: {
+            code: "FILE_TOO_LARGE",
+            message: "直传文件最大允许 50 MiB",
+          },
+        }) as Response;
+      }
+
       let storageProvider: StorageProviderRecord | null = null;
       if (storageProviderId) {
         storageProvider = await prisma.storageProvider.findUnique({
@@ -423,7 +466,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       }
 
       const tempKey = buildObjectKey({
-        filename: initFileName,
+        filename: `${randomUUID()}${path.extname(initFileName)}`,
         pathTemplate: TEMP_UPLOAD_PATH_TEMPLATE,
         ensureUniqueName: true,
       });
@@ -458,6 +501,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         const s3Client = new S3Client({
           region: s3Config.region,
           endpoint: s3Config.endpoint,
+          requestChecksumCalculation: "WHEN_REQUIRED",
           forcePathStyle:
             s3Config.forcePathStyle === true ||
             s3Config.forcePathStyle === "true",
@@ -471,12 +515,24 @@ export async function POST(request: NextRequest): Promise<Response> {
           Bucket: s3Config.bucket,
           Key: objectKey,
           ContentType: initContentType,
+          ContentLength: initFileSize,
         });
         const uploadUrl = await getSignedUrl(
           s3Client as unknown as Parameters<typeof getSignedUrl>[0],
           uploadCommand as unknown as Parameters<typeof getSignedUrl>[1],
-          { expiresIn: DIRECT_UPLOAD_SIGN_EXPIRES_SECONDS },
+          {
+            expiresIn: DIRECT_UPLOAD_TICKET_TTL_SECONDS,
+            signableHeaders: new Set(["content-length", "content-type"]),
+          },
         );
+
+        await createDirectUploadTicket({
+          uid: user.uid,
+          providerId: String(storageProvider.id),
+          tempKey,
+          expectedSize: initFileSize,
+          contentType: initContentType,
+        });
 
         return response.ok({
           data: {
@@ -513,11 +569,19 @@ export async function POST(request: NextRequest): Promise<Response> {
         const blobClientToken = await generateClientTokenFromReadWriteToken({
           token: blobConfig.token,
           pathname: blobPathname,
-          maximumSizeInBytes: storageProvider.maxFileSize,
+          maximumSizeInBytes: initFileSize,
           allowedContentTypes: ["image/*"],
-          validUntil: Date.now() + DIRECT_UPLOAD_TOKEN_EXPIRES_MS,
+          validUntil: Date.now() + DIRECT_UPLOAD_TICKET_TTL_SECONDS * 1000,
           addRandomSuffix: false,
           allowOverwrite: false,
+        });
+
+        await createDirectUploadTicket({
+          uid: user.uid,
+          providerId: String(storageProvider.id),
+          tempKey,
+          expectedSize: initFileSize,
+          contentType: initContentType,
         });
 
         return response.ok({
@@ -589,21 +653,61 @@ export async function POST(request: NextRequest): Promise<Response> {
         }) as Response;
       }
 
-      if (storageProvider.type === "LOCAL") {
+      if (
+        storageProvider.type !== "AWS_S3" &&
+        storageProvider.type !== "VERCEL_BLOB"
+      ) {
         return response.badRequest({
-          message: "本地存储请使用直接上传模式",
+          message: "该存储类型不支持 complete 流程",
           error: {
             code: "UNSUPPORTED_COMPLETE_MODE",
-            message: "LOCAL 存储不支持 complete 流程",
+            message: `当前存储类型 ${storageProvider.type} 暂不支持 complete`,
+          },
+        }) as Response;
+      }
+
+      const directUploadTicket = await consumeDirectUploadTicket({
+        uid: user.uid,
+        providerId: String(storageProvider.id),
+        tempKey: completeTempKey,
+      });
+
+      if (!directUploadTicket) {
+        return response.badRequest({
+          message: "直传票据无效、已过期或已使用",
+          error: {
+            code: "INVALID_DIRECT_UPLOAD",
+            message: "请重新初始化上传",
+          },
+        }) as Response;
+      }
+
+      const { after } = await import("next/server");
+      after(async () => {
+        await deleteObject({
+          type: storageProvider.type,
+          baseUrl: storageProvider.baseUrl,
+          pathTemplate: storageProvider.pathTemplate,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          config: storageProvider.config as any,
+          key: directUploadTicket.tempKey,
+        }).catch((error) => {
+          console.error("Delete temp object failed:", error);
+        });
+      });
+
+      if (directUploadTicket.expectedSize > storageProvider.maxFileSize) {
+        return response.badRequest({
+          message: "直传文件大小超过当前存储限制",
+          error: {
+            code: "FILE_TOO_LARGE",
+            message: "文件大小超出限制",
           },
         }) as Response;
       }
 
       let tempBuffer: Buffer;
-      let tempMimeType =
-        completeOriginalMimeType ||
-        initContentType ||
-        "application/octet-stream";
+      const tempMimeType = directUploadTicket.contentType;
 
       try {
         if (storageProvider.type === "AWS_S3") {
@@ -634,7 +738,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
           const objectKey = joinStoragePrefix(
             s3Config.basePath,
-            completeTempKey,
+            directUploadTicket.tempKey,
           );
           const s3Client = new S3Client({
             region: s3Config.region,
@@ -659,6 +763,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             typeof object.ContentLength === "number" &&
             object.ContentLength > storageProvider.maxFileSize
           ) {
+            closeS3Body(object.Body);
             return response.badRequest({
               message: `文件大小超出限制: ${(object.ContentLength / 1024 / 1024).toFixed(2)}MB，最大允许 ${(storageProvider.maxFileSize / 1024 / 1024).toFixed(2)}MB`,
               error: {
@@ -668,15 +773,36 @@ export async function POST(request: NextRequest): Promise<Response> {
             }) as Response;
           }
 
+          if (object.ContentLength !== directUploadTicket.expectedSize) {
+            closeS3Body(object.Body);
+            return response.badRequest({
+              message: "直传对象大小与初始化声明不一致",
+              error: {
+                code: "FILE_SIZE_MISMATCH",
+                message: "请重新初始化上传",
+              },
+            }) as Response;
+          }
+
+          const objectContentType = object.ContentType?.split(";")[0]
+            ?.trim()
+            .toLowerCase();
+          if (objectContentType !== directUploadTicket.contentType) {
+            closeS3Body(object.Body);
+            return response.badRequest({
+              message: "直传对象类型与初始化声明不一致",
+              error: {
+                code: "CONTENT_TYPE_MISMATCH",
+                message: "请重新初始化上传",
+              },
+            }) as Response;
+          }
+
           tempBuffer = await readS3BodyWithLimit(
             object.Body,
-            storageProvider.maxFileSize,
+            directUploadTicket.expectedSize,
           );
-          if (object.ContentType) {
-            tempMimeType =
-              object.ContentType.split(";")[0]?.trim() || tempMimeType;
-          }
-        } else if (storageProvider.type === "VERCEL_BLOB") {
+        } else {
           const blobConfig = (storageProvider.config || {}) as {
             token?: string;
             basePath?: string;
@@ -694,11 +820,33 @@ export async function POST(request: NextRequest): Promise<Response> {
 
           const blobPathname = joinStoragePrefix(
             blobConfig.basePath,
-            completeTempKey,
+            directUploadTicket.tempKey,
           );
           const blobMeta = await headBlob(blobPathname, {
             token: blobConfig.token,
           });
+          if (blobMeta.size !== directUploadTicket.expectedSize) {
+            return response.badRequest({
+              message: "直传对象大小与初始化声明不一致",
+              error: {
+                code: "FILE_SIZE_MISMATCH",
+                message: "请重新初始化上传",
+              },
+            }) as Response;
+          }
+          if (
+            blobMeta.contentType.split(";")[0]?.trim().toLowerCase() !==
+            directUploadTicket.contentType
+          ) {
+            return response.badRequest({
+              message: "直传对象类型与初始化声明不一致",
+              error: {
+                code: "CONTENT_TYPE_MISMATCH",
+                message: "请重新初始化上传",
+              },
+            }) as Response;
+          }
+
           const blobResponse = await fetch(blobMeta.downloadUrl, {
             method: "GET",
           });
@@ -708,23 +856,10 @@ export async function POST(request: NextRequest): Promise<Response> {
             );
           }
 
-          const contentTypeHeader = blobResponse.headers.get("content-type");
-          if (contentTypeHeader) {
-            tempMimeType =
-              contentTypeHeader.split(";")[0]?.trim() || tempMimeType;
-          }
           tempBuffer = await readResponseBufferWithLimit(
             blobResponse,
-            storageProvider.maxFileSize,
+            directUploadTicket.expectedSize,
           );
-        } else {
-          return response.badRequest({
-            message: "该存储类型不支持 complete 流程",
-            error: {
-              code: "UNSUPPORTED_COMPLETE_MODE",
-              message: `当前存储类型 ${storageProvider.type} 暂不支持 complete`,
-            },
-          }) as Response;
         }
       } catch (error) {
         const errorMessage =
@@ -738,19 +873,15 @@ export async function POST(request: NextRequest): Promise<Response> {
         }) as Response;
       }
 
-      const { after } = await import("next/server");
-      after(async () => {
-        await deleteObject({
-          type: storageProvider.type,
-          baseUrl: storageProvider.baseUrl,
-          pathTemplate: storageProvider.pathTemplate,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          config: storageProvider.config as any,
-          key: completeTempKey,
-        }).catch((error) => {
-          console.error("Delete temp object failed:", error);
-        });
-      });
+      if (tempBuffer.byteLength !== directUploadTicket.expectedSize) {
+        return response.badRequest({
+          message: "直传对象大小与初始化声明不一致",
+          error: {
+            code: "FILE_SIZE_MISMATCH",
+            message: "请重新初始化上传",
+          },
+        }) as Response;
+      }
 
       file = new File(
         [new Uint8Array(tempBuffer)],

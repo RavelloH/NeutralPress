@@ -8,7 +8,7 @@ import type {
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
 
-import { type AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
+import { verifyAccessToken } from "@/lib/server/auth-verify";
 import prisma from "@/lib/server/prisma";
 import ResponseBuilder from "@/lib/server/response";
 
@@ -61,7 +61,7 @@ export async function getTotpStatus(
       });
     }
 
-    const decoded = jwtTokenVerify<AccessTokenPayload>(accessToken);
+    const decoded = await verifyAccessToken(accessToken);
     if (!decoded) {
       return response.unauthorized({
         message: "未登录",

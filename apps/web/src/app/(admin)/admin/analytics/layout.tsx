@@ -2,8 +2,7 @@ import { cookies } from "next/headers";
 
 import ForbiddenPage from "@/app/forbidden";
 import UnauthorizedPage from "@/app/unauthorized";
-import type { AccessTokenPayload } from "@/lib/server/jwt";
-import { jwtTokenVerify } from "@/lib/server/jwt";
+import { verifyAccessToken } from "@/lib/server/auth-verify";
 
 const allowedRoles = ["ADMIN"];
 
@@ -20,8 +19,11 @@ export default async function AnalyticsLayout({
   }
 
   try {
-    const decoded = jwtTokenVerify(token);
-    const userRole = (decoded as AccessTokenPayload).role;
+    const decoded = await verifyAccessToken(token);
+    if (!decoded) {
+      return <UnauthorizedPage />;
+    }
+    const userRole = decoded.role;
 
     if (!allowedRoles.includes(userRole)) {
       return <ForbiddenPage role={userRole} allowRoles={allowedRoles} />;

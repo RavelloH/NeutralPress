@@ -11,10 +11,10 @@ vi.mock("@/lib/server/redis", () => ({
   ensureRedisConnection: vi.fn(),
 }));
 
-// Mock JWT
-const mockJwtTokenVerify = vi.fn();
-vi.mock("@/lib/server/jwt", () => ({
-  jwtTokenVerify: (...args: unknown[]) => mockJwtTokenVerify(...args),
+// Mock access-token validation
+const mockVerifyAccessToken = vi.fn();
+vi.mock("@/lib/server/auth-verify", () => ({
+  verifyAccessToken: (...args: unknown[]) => mockVerifyAccessToken(...args),
 }));
 
 // Mock fs 读取 Lua 脚本（rate-limit.ts 在模块顶层调用 readFileSync）
@@ -37,6 +37,7 @@ describe("rate-limit", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     vi.resetModules();
+    mockVerifyAccessToken.mockResolvedValue(null);
     rateLimitModule = await import("@/lib/server/rate-limit");
   });
 
@@ -214,7 +215,7 @@ describe("rate-limit", () => {
       mockRedis.evalsha.mockResolvedValue(1);
 
       // ADMIN 角色
-      mockJwtTokenVerify.mockReturnValue({ uid: 1, role: "ADMIN" });
+      mockVerifyAccessToken.mockResolvedValue({ uid: 1, role: "ADMIN" });
       const adminHeaders = new Headers({
         "x-real-ip": "10.0.0.1",
         cookie: "ACCESS_TOKEN=admin-token",
@@ -230,7 +231,7 @@ describe("rate-limit", () => {
       mockRedis.evalsha.mockResolvedValue(1);
 
       // USER 角色
-      mockJwtTokenVerify.mockReturnValue({ uid: 2, role: "USER" });
+      mockVerifyAccessToken.mockResolvedValue({ uid: 2, role: "USER" });
       const userHeaders = new Headers({
         "x-real-ip": "10.0.0.2",
         cookie: "ACCESS_TOKEN=user-token",
@@ -245,7 +246,7 @@ describe("rate-limit", () => {
     it("无效 token 应使用访客限制", async () => {
       mockRedis.script.mockResolvedValue("sha123");
       mockRedis.evalsha.mockResolvedValue(1);
-      mockJwtTokenVerify.mockReturnValue(null);
+      mockVerifyAccessToken.mockResolvedValue(null);
 
       const headers = new Headers({
         "x-real-ip": "10.0.0.1",

@@ -3,9 +3,9 @@ import type { ApiResponse } from "@repo/shared-types/api/common";
 import { cookies, headers } from "next/headers";
 
 import { logAuditEvent } from "@/lib/server/audit";
+import { verifyAccessToken, verifySession } from "@/lib/server/auth-verify";
 import { verifyToken } from "@/lib/server/captcha";
 import {
-  type AccessTokenPayload,
   jwtTokenSign,
   jwtTokenVerify,
   type TotpTokenPayload,
@@ -20,11 +20,10 @@ import {
 import ResponseBuilder from "@/lib/server/response";
 import * as reauthprofiledomainService from "@/lib/server/services/reauth-profile-domain";
 import {
-  checkTotpFailCount,
   decryptBackupCode,
   decryptTotpSecret,
-  incrementTotpFailCount,
   isValidBackupCodeFormat,
+  reserveTotpAttempt,
   resetTotpFailCount,
   verifyTotpCode,
 } from "@/lib/server/totp";
@@ -79,7 +78,7 @@ export async function verifyPasswordForReauth({
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
-    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
+    const decoded = await verifyAccessToken(token);
 
     if (!decoded) {
       return response.unauthorized({
@@ -133,6 +132,8 @@ export async function verifyPasswordForReauth({
         inner: {
           uid: user.uid,
           type: "totp_verification",
+          purpose: "reauth",
+          sessionId: decoded.sessionId,
         },
         expired: "5m",
       });
@@ -149,8 +150,6 @@ export async function verifyPasswordForReauth({
         priority: "high",
       });
 
-      // 重置 TOTP 验证失败次数
-      await resetTotpFailCount(user.uid);
       try {
         await logAuditEvent({
           user: {
@@ -180,6 +179,13 @@ export async function verifyPasswordForReauth({
         data: {
           requiresTotp: true,
         },
+      }) as unknown as ApiResponse<null>;
+    }
+
+    const activeSessionUser = await verifySession(decoded.sessionId, user.uid);
+    if (!activeSessionUser) {
+      return response.unauthorized({
+        message: "登录状态已失效，请重新登录",
       }) as unknown as ApiResponse<null>;
     }
 
@@ -286,7 +292,12 @@ export async function verifyTotpForReauth({
     // 验证 TOTP Token
     const decoded = jwtTokenVerify<TotpTokenPayload>(totpToken);
 
-    if (!decoded || decoded.type !== "totp_verification") {
+    if (
+      !decoded ||
+      decoded.type !== "totp_verification" ||
+      decoded.purpose !== "reauth" ||
+      !decoded.sessionId
+    ) {
       return response.unauthorized({
         message: "无效的验证令牌",
       }) as unknown as ApiResponse<null>;
@@ -294,15 +305,22 @@ export async function verifyTotpForReauth({
 
     const { uid } = decoded;
 
+    if (!(await verifySession(decoded.sessionId, uid))) {
+      cookieStore.delete("TOTP_TOKEN");
+      return response.unauthorized({
+        message: "登录状态已失效，请重新登录",
+      }) as unknown as ApiResponse<null>;
+    }
+
     // 检查是否超过失败次数限制
-    if (await checkTotpFailCount(uid)) {
+    if (!(await reserveTotpAttempt(uid))) {
       // 清除 TOTP Token
       cookieStore.delete("TOTP_TOKEN");
       return response.unauthorized({
-        message: "验证失败次数过多，请重新验证",
+        message: "验证失败次数过多，请稍后重试",
         error: {
           code: "TOTP_VERIFICATION_FAILED",
-          message: "验证失败次数过多，请重新验证",
+          message: "验证失败次数过多，请稍后重试",
         },
       }) as unknown as ApiResponse<null>;
     }
@@ -314,10 +332,18 @@ export async function verifyTotpForReauth({
         uid: true,
         totpSecret: true,
         totpBackupCodes: true,
+        status: true,
+        deletedAt: true,
       },
     });
 
-    if (!user || !user.totpSecret) {
+    if (!user || user.status !== "ACTIVE" || user.deletedAt) {
+      return response.unauthorized({
+        message: "该账户已被禁用",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    if (!user.totpSecret) {
       return response.badRequest({
         message: "TOTP 未启用",
         error: {
@@ -344,7 +370,6 @@ export async function verifyTotpForReauth({
     // 验证备份码
     else if (backup_code && user.totpBackupCodes) {
       if (!isValidBackupCodeFormat(backup_code)) {
-        await incrementTotpFailCount(uid);
         return response.badRequest({
           message: "备份码格式错误",
         }) as unknown as ApiResponse<null>;
@@ -379,7 +404,6 @@ export async function verifyTotpForReauth({
     }
 
     if (!verified) {
-      await incrementTotpFailCount(uid);
       return response.badRequest({
         message: "验证码错误，请重试",
       }) as unknown as ApiResponse<null>;
@@ -387,6 +411,13 @@ export async function verifyTotpForReauth({
 
     // 验证成功，重置失败次数
     await resetTotpFailCount(uid);
+
+    if (!(await verifySession(decoded.sessionId, uid))) {
+      cookieStore.delete("TOTP_TOKEN");
+      return response.unauthorized({
+        message: "登录状态已失效，请重新登录",
+      }) as unknown as ApiResponse<null>;
+    }
 
     // 清除 TOTP Token
     cookieStore.delete("TOTP_TOKEN");
@@ -486,6 +517,7 @@ export async function verifySSOForReauth({
 
     const oauthReauthPayload = jwtTokenVerify<{
       uid: number;
+      sessionId: string;
       purpose: string;
       provider: string;
     }>(oauthReauthToken);
@@ -503,6 +535,12 @@ export async function verifySSOForReauth({
     if (oauthReauthPayload.uid !== uid) {
       return response.forbidden({
         message: "认证用户不匹配，请重新发起验证",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    if (!(await verifySession(oauthReauthPayload.sessionId, uid))) {
+      return response.unauthorized({
+        message: "登录状态已失效，请重新发起验证",
       }) as unknown as ApiResponse<null>;
     }
 

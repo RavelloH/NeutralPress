@@ -19,10 +19,7 @@ import { runAutoCleanupMaintenance } from "@/lib/server/doctor-maintenance";
 import { expireCacheTag } from "@/lib/server/isr-invalidation";
 import prisma from "@/lib/server/prisma";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
-import {
-  assertPublicHttpUrl,
-  readResponseBufferWithLimit,
-} from "@/lib/server/url-security";
+import { fetchPublicHttpUrlBuffer } from "@/lib/server/url-security";
 
 import { Prisma } from ".prisma/client";
 
@@ -243,34 +240,20 @@ async function requestUrlWithTiming(url: string): Promise<{
 }> {
   const startedAt = performance.now();
   try {
-    const safeUrl = (await assertPublicHttpUrl(url.trim())).url.toString();
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    let response: Response;
-
-    try {
-      response = await fetch(safeUrl, {
-        method: "GET",
-        redirect: "follow",
-        signal: controller.signal,
-        headers: {
-          "User-Agent": "NeutralPress FriendLinkChecker/1.0",
-        },
-        cache: "no-store",
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    const htmlBuffer = await readResponseBufferWithLimit(
-      response,
-      2 * 1024 * 1024,
-    );
+    const result = await fetchPublicHttpUrlBuffer(url.trim(), {
+      method: "GET",
+      timeoutMs: 10000,
+      maxBytes: 2 * 1024 * 1024,
+      maxRedirects: 3,
+      headers: {
+        "User-Agent": "NeutralPress FriendLinkChecker/1.0",
+      },
+    });
     return {
-      ok: response.ok,
-      statusCode: response.status,
+      ok: result.status >= 200 && result.status < 300,
+      statusCode: result.status,
       responseTime: Math.max(0, Math.round(performance.now() - startedAt)),
-      html: htmlBuffer.toString("utf-8"),
+      html: result.body.toString("utf-8"),
     };
   } catch {
     return {

@@ -36,10 +36,9 @@ import { cookies, headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
 import { logAuditEvent } from "@/lib/server/audit";
-import { authVerify } from "@/lib/server/auth-verify";
+import { authVerify, verifyAccessToken } from "@/lib/server/auth-verify";
 import { calculateMD5 } from "@/lib/server/crypto";
 import { expireCacheTag as updateTag } from "@/lib/server/isr-invalidation";
-import { type AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
 import { hashPassword } from "@/lib/server/password";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
@@ -736,14 +735,32 @@ export async function updateUsers(
         oldData[key] = oldUser[key as keyof typeof oldUser];
       });
 
-      // 执行更新
-      const result = await prisma.user.updateMany({
-        where: {
-          uid: targetUid,
-          deletedAt: null,
-        },
-        data: updateData,
-      });
+      // 停用账号与撤销其会话必须原子完成。
+      const result =
+        status && status !== "ACTIVE"
+          ? await prisma.$transaction(async (tx) => {
+              const updateResult = await tx.user.updateMany({
+                where: {
+                  uid: targetUid,
+                  deletedAt: null,
+                },
+                data: updateData,
+              });
+              if (updateResult.count > 0) {
+                await tx.refreshToken.updateMany({
+                  where: { userUid: targetUid, revokedAt: null },
+                  data: { revokedAt: new Date() },
+                });
+              }
+              return updateResult;
+            })
+          : await prisma.user.updateMany({
+              where: {
+                uid: targetUid,
+                deletedAt: null,
+              },
+              data: updateData,
+            });
 
       // 记录审计日志
       if (result.count > 0) {
@@ -847,16 +864,36 @@ export async function updateUsers(
         updateData.status = status;
       }
 
-      // 执行批量更新
-      const result = await prisma.user.updateMany({
-        where: {
-          uid: {
-            in: uids,
-          },
-          deletedAt: null, // 只更新未删除的用户
-        },
-        data: updateData,
-      });
+      // 停用账号与撤销其会话必须原子完成。
+      const result =
+        status && status !== "ACTIVE"
+          ? await prisma.$transaction(async (tx) => {
+              const updateResult = await tx.user.updateMany({
+                where: {
+                  uid: {
+                    in: uids,
+                  },
+                  deletedAt: null,
+                },
+                data: updateData,
+              });
+              if (updateResult.count > 0) {
+                await tx.refreshToken.updateMany({
+                  where: { userUid: { in: uids }, revokedAt: null },
+                  data: { revokedAt: new Date() },
+                });
+              }
+              return updateResult;
+            })
+          : await prisma.user.updateMany({
+              where: {
+                uid: {
+                  in: uids,
+                },
+                deletedAt: null,
+              },
+              data: updateData,
+            });
 
       // 记录审计日志
       if (result.count > 0) {
@@ -983,16 +1020,25 @@ export async function deleteUsers(
     const NOW = new Date();
 
     // 执行软删除
-    const result = await prisma.user.updateMany({
-      where: {
-        uid: {
-          in: uids,
+    const result = await prisma.$transaction(async (tx) => {
+      const deleteResult = await tx.user.updateMany({
+        where: {
+          uid: {
+            in: uids,
+          },
+          deletedAt: null,
         },
-        deletedAt: null, // 只删除未删除的用户
-      },
-      data: {
-        deletedAt: NOW,
-      },
+        data: {
+          deletedAt: NOW,
+        },
+      });
+      if (deleteResult.count > 0) {
+        await tx.refreshToken.updateMany({
+          where: { userUid: { in: uids }, revokedAt: null },
+          data: { revokedAt: NOW },
+        });
+      }
+      return deleteResult;
     });
 
     // 记录审计日志
@@ -1101,7 +1147,7 @@ export async function getUserProfile(serverConfig?: ActionConfig): Promise<
     // 从 cookie 获取当前用户的 access token
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
-    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
+    const decoded = await verifyAccessToken(token);
 
     if (!decoded) {
       return response.unauthorized({
@@ -1200,8 +1246,7 @@ export async function updateUserProfile(
     // 从 cookie 获取当前用户
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
-    const { jwtTokenVerify } = await import("@/lib/server/jwt");
-    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
+    const decoded = await verifyAccessToken(token);
 
     if (!decoded) {
       return response.unauthorized({
@@ -1659,9 +1704,7 @@ export async function getUserPublicProfile(
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value;
-    const currentUser = token
-      ? jwtTokenVerify<AccessTokenPayload>(token)
-      : null;
+    const currentUser = token ? await verifyAccessToken(token) : null;
 
     // 查询目标用户基本信息
     const targetUser = await prisma.user.findUnique({

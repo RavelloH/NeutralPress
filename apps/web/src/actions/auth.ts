@@ -42,23 +42,21 @@ import type { NextResponse } from "next/server";
 import { after } from "next/server";
 
 import { logAuditEvent } from "@/lib/server/audit";
+import { verifyAccessToken, verifySession } from "@/lib/server/auth-verify";
 import { verifyToken } from "@/lib/server/captcha";
 import { getConfig, getConfigs } from "@/lib/server/config-cache";
 import emailUtils from "@/lib/server/email";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import {
-  type AccessTokenPayload,
   jwtTokenSign,
   jwtTokenVerify,
   type RefreshTokenPayload,
 } from "@/lib/server/jwt";
-import { verifyPassword } from "@/lib/server/password";
-import { hashPassword } from "@/lib/server/password";
+import { hashPassword, verifyPassword } from "@/lib/server/password";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
 import * as sessionService from "@/lib/server/services/session-domain";
-import { resetTotpFailCount } from "@/lib/server/totp";
 import { validateData } from "@/lib/server/validator";
 
 type AuthActionEnvironment = "serverless" | "serveraction";
@@ -254,6 +252,7 @@ export async function login(
         inner: {
           uid: user.uid,
           type: "totp_verification",
+          purpose: "login",
         },
         expired: "5m",
       });
@@ -272,9 +271,6 @@ export async function login(
           priority: "high",
         });
       }
-
-      // 重置 TOTP 验证失败次数
-      await resetTotpFailCount(user.uid);
 
       try {
         await logAuditEvent({
@@ -333,6 +329,12 @@ export async function login(
       },
     });
 
+    const activeSessionUser = await verifySession(dbRefreshToken.id, user.uid);
+    if (!activeSessionUser) {
+      await prisma.refreshToken.delete({ where: { id: dbRefreshToken.id } });
+      return response.forbidden({ message: "该账户已被禁用，请重新登录" });
+    }
+
     // 分发令牌
     // Refresh Token
     const refreshToken = jwtTokenSign({
@@ -346,10 +348,12 @@ export async function login(
     // Access Token
     const accessToken = jwtTokenSign({
       inner: {
+        type: "access",
         uid: user.uid,
-        username: user.username,
-        nickname: user.nickname ?? "",
-        role: user.role,
+        sessionId: dbRefreshToken.id,
+        username: activeSessionUser.username,
+        nickname: activeSessionUser.nickname ?? activeSessionUser.username,
+        role: activeSessionUser.role,
       },
       expired: "10m",
     });
@@ -694,21 +698,36 @@ export async function refresh(
             role: true,
             avatar: true,
             email: true,
+            status: true,
+            deletedAt: true,
           },
         },
       },
     });
-    if (!dbToken || dbToken.revokedAt || dbToken.expiresAt < new Date()) {
+    if (
+      !dbToken ||
+      dbToken.revokedAt ||
+      dbToken.expiresAt <= new Date() ||
+      dbToken.user.status !== "ACTIVE" ||
+      dbToken.user.deletedAt
+    ) {
+      return response.unauthorized();
+    }
+
+    const activeSessionUser = await verifySession(dbToken.id, dbToken.user.uid);
+    if (!activeSessionUser) {
       return response.unauthorized();
     }
 
     // 创建新 Access Token
     const accessToken = jwtTokenSign({
       inner: {
-        uid: dbToken.user.uid,
-        username: dbToken.user.username,
-        nickname: dbToken.user.nickname ?? "",
-        role: dbToken.user.role,
+        type: "access",
+        uid: activeSessionUser.uid,
+        sessionId: dbToken.id,
+        username: activeSessionUser.username,
+        nickname: activeSessionUser.nickname ?? activeSessionUser.username,
+        role: activeSessionUser.role,
       },
       expired: "10m",
     });
@@ -959,7 +978,7 @@ export async function changePassword(
     const cookieStore = await cookies();
     const token = access_token || cookieStore.get("ACCESS_TOKEN")?.value || "";
     // 验证 Access Token
-    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
+    const decoded = await verifyAccessToken(token);
     if (!decoded) {
       return response.unauthorized();
     }
@@ -1795,7 +1814,7 @@ export async function revokeSession(
       });
     }
 
-    const decodedAccess = jwtTokenVerify<AccessTokenPayload>(accessToken);
+    const decodedAccess = await verifyAccessToken(accessToken);
     if (!decodedAccess) {
       return response.unauthorized({
         message: "未登录",

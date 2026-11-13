@@ -49,6 +49,13 @@ vi.mock("@/lib/server/prisma", () => ({
   },
 }));
 
+const mockVerifyAccessToken = vi.fn();
+const mockVerifySession = vi.fn();
+vi.mock("@/lib/server/auth-verify", () => ({
+  verifyAccessToken: (...args: unknown[]) => mockVerifyAccessToken(...args),
+  verifySession: (...args: unknown[]) => mockVerifySession(...args),
+}));
+
 const mockJwtTokenSign = vi.fn();
 const mockJwtTokenVerify = vi.fn();
 vi.mock("@/lib/server/jwt", () => ({
@@ -78,6 +85,7 @@ const mockDecryptTotpSecret = vi.fn();
 const mockIncrementTotpFailCount = vi.fn();
 const mockIsValidBackupCodeFormat = vi.fn();
 const mockResetTotpFailCount = vi.fn();
+const mockReserveTotpAttempt = vi.fn();
 const mockVerifyTotpCode = vi.fn();
 vi.mock("@/lib/server/totp", () => ({
   checkTotpFailCount: (...args: unknown[]) => mockCheckTotpFailCount(...args),
@@ -88,6 +96,7 @@ vi.mock("@/lib/server/totp", () => ({
   isValidBackupCodeFormat: (...args: unknown[]) =>
     mockIsValidBackupCodeFormat(...args),
   resetTotpFailCount: (...args: unknown[]) => mockResetTotpFailCount(...args),
+  reserveTotpAttempt: (...args: unknown[]) => mockReserveTotpAttempt(...args),
   verifyTotpCode: (...args: unknown[]) => mockVerifyTotpCode(...args),
 }));
 
@@ -107,6 +116,23 @@ describe("reauth actions", () => {
     mockGetClientIP.mockResolvedValue("127.0.0.1");
     mockGetClientUserAgent.mockResolvedValue("Mozilla/5.0 Test");
     mockJwtTokenSign.mockReturnValue("signed-token");
+    mockVerifyAccessToken.mockResolvedValue({
+      type: "access",
+      uid: 1,
+      sessionId: "session-1",
+      username: "testuser",
+      nickname: "testuser",
+      role: "USER",
+    });
+    mockVerifySession.mockImplementation(
+      async (_sessionId: string, uid: number) => ({
+        uid,
+        username: "testuser",
+        nickname: "testuser",
+        role: "USER",
+      }),
+    );
+    mockReserveTotpAttempt.mockResolvedValue(true);
 
     mockCookiesGet.mockReturnValue(undefined);
     mockHeadersGet.mockReturnValue(null);
@@ -247,6 +273,7 @@ describe("reauth actions", () => {
         return undefined;
       });
       mockJwtTokenVerify.mockReturnValue(null);
+      mockVerifyAccessToken.mockResolvedValue(null);
 
       const result = await reauthModule.getCurrentUserForReauth();
 
@@ -468,8 +495,13 @@ describe("reauth actions", () => {
         if (name === "TOTP_TOKEN") return { value: "totp-token" };
         return undefined;
       });
-      mockJwtTokenVerify.mockReturnValue({ uid: 1, type: "totp_verification" });
-      mockCheckTotpFailCount.mockResolvedValue(true);
+      mockJwtTokenVerify.mockReturnValue({
+        uid: 1,
+        type: "totp_verification",
+        purpose: "reauth",
+        sessionId: "session-1",
+      });
+      mockReserveTotpAttempt.mockResolvedValue(false);
 
       const result = await reauthModule.verifyTotpForReauth({
         totp_code: "123456",
@@ -484,12 +516,19 @@ describe("reauth actions", () => {
         if (name === "TOTP_TOKEN") return { value: "totp-token" };
         return undefined;
       });
-      mockJwtTokenVerify.mockReturnValue({ uid: 1, type: "totp_verification" });
-      mockCheckTotpFailCount.mockResolvedValue(false);
+      mockJwtTokenVerify.mockReturnValue({
+        uid: 1,
+        type: "totp_verification",
+        purpose: "reauth",
+        sessionId: "session-1",
+      });
+      mockReserveTotpAttempt.mockResolvedValue(true);
       mockPrismaUserFindUnique.mockResolvedValue({
         uid: 1,
         totpSecret: "encrypted",
         totpBackupCodes: null,
+        status: "ACTIVE",
+        deletedAt: null,
       });
       mockDecryptTotpSecret.mockReturnValue("decrypted-secret");
       mockVerifyTotpCode.mockReturnValue(true);
@@ -511,12 +550,19 @@ describe("reauth actions", () => {
         if (name === "TOTP_TOKEN") return { value: "totp-token" };
         return undefined;
       });
-      mockJwtTokenVerify.mockReturnValue({ uid: 1, type: "totp_verification" });
-      mockCheckTotpFailCount.mockResolvedValue(false);
+      mockJwtTokenVerify.mockReturnValue({
+        uid: 1,
+        type: "totp_verification",
+        purpose: "reauth",
+        sessionId: "session-1",
+      });
+      mockReserveTotpAttempt.mockResolvedValue(true);
       mockPrismaUserFindUnique.mockResolvedValue({
         uid: 1,
         totpSecret: "encrypted",
         totpBackupCodes: { codes: [] },
+        status: "ACTIVE",
+        deletedAt: null,
       });
       mockDecryptTotpSecret.mockReturnValue("decrypted-secret");
       mockIsValidBackupCodeFormat.mockReturnValue(false);
@@ -526,7 +572,7 @@ describe("reauth actions", () => {
       });
 
       expect(result.success).toBe(false);
-      expect(mockIncrementTotpFailCount).toHaveBeenCalled();
+      expect(mockReserveTotpAttempt).toHaveBeenCalledWith(1);
     });
   });
 
@@ -568,6 +614,7 @@ describe("reauth actions", () => {
       });
       mockJwtTokenVerify.mockReturnValue({
         uid: 999,
+        sessionId: "session-1",
         purpose: "oauth_reauth",
         provider: "google",
       });
@@ -584,6 +631,7 @@ describe("reauth actions", () => {
       });
       mockJwtTokenVerify.mockReturnValue({
         uid: 1,
+        sessionId: "session-1",
         purpose: "oauth_reauth",
         provider: "google",
       });
@@ -609,6 +657,7 @@ describe("reauth actions", () => {
       });
       mockJwtTokenVerify.mockReturnValue({
         uid: 1,
+        sessionId: "session-1",
         purpose: "oauth_reauth",
         provider: "google",
       });

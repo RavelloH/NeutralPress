@@ -51,6 +51,7 @@ const mockPrismaRefreshTokenCreate = vi.fn();
 const mockPrismaRefreshTokenFindUnique = vi.fn();
 const mockPrismaRefreshTokenFindMany = vi.fn();
 const mockPrismaRefreshTokenUpdate = vi.fn();
+const mockPrismaRefreshTokenDelete = vi.fn();
 const mockPrismaRefreshTokenDeleteMany = vi.fn();
 const mockPrismaPasswordResetFindFirst = vi.fn();
 const mockPrismaPasswordResetFindUnique = vi.fn();
@@ -70,6 +71,7 @@ vi.mock("@/lib/server/prisma", () => ({
         mockPrismaRefreshTokenFindUnique(...args),
       findMany: (...args: unknown[]) => mockPrismaRefreshTokenFindMany(...args),
       update: (...args: unknown[]) => mockPrismaRefreshTokenUpdate(...args),
+      delete: (...args: unknown[]) => mockPrismaRefreshTokenDelete(...args),
       deleteMany: (...args: unknown[]) =>
         mockPrismaRefreshTokenDeleteMany(...args),
     },
@@ -83,6 +85,13 @@ vi.mock("@/lib/server/prisma", () => ({
         mockPrismaPasswordResetDeleteMany(...args),
     },
   },
+}));
+
+const mockVerifyAccessToken = vi.fn();
+const mockVerifySession = vi.fn();
+vi.mock("@/lib/server/auth-verify", () => ({
+  verifyAccessToken: (...args: unknown[]) => mockVerifyAccessToken(...args),
+  verifySession: (...args: unknown[]) => mockVerifySession(...args),
 }));
 
 const mockJwtTokenSign = vi.fn();
@@ -149,6 +158,24 @@ describe("auth actions", () => {
     mockHashPassword.mockResolvedValue("hashed-password");
     mockJwtTokenSign.mockReturnValue("signed-token");
     mockCheckReauthToken.mockResolvedValue(true);
+    mockVerifyAccessToken.mockResolvedValue({
+      type: "access",
+      uid: 1,
+      sessionId: "session-1",
+      username: "testuser",
+      nickname: "testuser",
+      role: "USER",
+      iat: 1,
+      exp: 9999,
+    });
+    mockVerifySession.mockImplementation(
+      async (_sessionId: string, uid: number) => ({
+        uid,
+        username: "testuser",
+        nickname: "testuser",
+        role: "USER",
+      }),
+    );
 
     // cookie mock: 默认返回空
     mockCookiesGet.mockReturnValue(undefined);
@@ -560,6 +587,8 @@ describe("auth actions", () => {
           role: "USER",
           avatar: null,
           email: "t@t.com",
+          status: "ACTIVE",
+          deletedAt: null,
         },
       });
 
@@ -589,6 +618,8 @@ describe("auth actions", () => {
           role: "USER",
           avatar: null,
           email: "t@t.com",
+          status: "ACTIVE",
+          deletedAt: null,
         },
       });
 
@@ -714,6 +745,7 @@ describe("auth actions", () => {
 
     it("无有效 access token 时应返回未授权", async () => {
       mockJwtTokenVerify.mockReturnValue(null);
+      mockVerifyAccessToken.mockResolvedValue(null);
 
       const result = await authModule.changePassword({
         old_password: "OldPass123",

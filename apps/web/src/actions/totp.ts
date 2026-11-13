@@ -18,11 +18,11 @@ import { cookies, headers } from "next/headers";
 import { after, type NextResponse } from "next/server";
 
 import { logAuditEvent } from "@/lib/server/audit";
+import { verifyAccessToken, verifySession } from "@/lib/server/auth-verify";
 import { generateCacheKey } from "@/lib/server/cache";
 import { getConfig } from "@/lib/server/config-cache";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import {
-  type AccessTokenPayload,
   jwtTokenSign,
   jwtTokenVerify,
   type TotpTokenPayload,
@@ -33,7 +33,6 @@ import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import ResponseBuilder from "@/lib/server/response";
 import * as totpStatusService from "@/lib/server/services/totp-status-domain";
 import {
-  checkTotpFailCount,
   decryptBackupCode,
   decryptTotpSecret,
   encryptBackupCode,
@@ -41,8 +40,8 @@ import {
   generateBackupCodes,
   generateTotpSecret,
   generateTotpUri,
-  incrementTotpFailCount,
   isValidBackupCodeFormat,
+  reserveTotpAttempt,
   resetTotpFailCount,
   verifyTotpCode,
 } from "@/lib/server/totp";
@@ -115,7 +114,11 @@ export async function verifyTotp(
 
     // 验证 TOTP Token
     const decoded = jwtTokenVerify<TotpTokenPayload>(totpToken);
-    if (!decoded || decoded.type !== "totp_verification") {
+    if (
+      !decoded ||
+      decoded.type !== "totp_verification" ||
+      decoded.purpose !== "login"
+    ) {
       return response.unauthorized({
         message: "无效的验证令牌",
       });
@@ -124,14 +127,14 @@ export async function verifyTotp(
     const { uid } = decoded;
 
     // 检查是否超过失败次数限制
-    if (await checkTotpFailCount(uid)) {
+    if (!(await reserveTotpAttempt(uid))) {
       // 清除 TOTP Token
       cookieStore.delete("TOTP_TOKEN");
       return response.unauthorized({
-        message: "验证失败次数过多，请重新登录",
+        message: "验证失败次数过多，请稍后重试",
         error: {
           code: "TOTP_VERIFICATION_FAILED",
-          message: "验证失败次数过多，请重新登录",
+          message: "验证失败次数过多，请稍后重试",
         },
       });
     }
@@ -148,10 +151,16 @@ export async function verifyTotp(
         email: true,
         totpSecret: true,
         totpBackupCodes: true,
+        status: true,
+        deletedAt: true,
       },
     });
 
-    if (!user || !user.totpSecret) {
+    if (!user || user.status !== "ACTIVE" || user.deletedAt) {
+      return response.unauthorized({ message: "该账户已被禁用" });
+    }
+
+    if (!user.totpSecret) {
       return response.badRequest({
         message: "TOTP 未启用",
         error: {
@@ -178,7 +187,6 @@ export async function verifyTotp(
     // 验证备份码
     else if (backup_code && user.totpBackupCodes) {
       if (!isValidBackupCodeFormat(backup_code)) {
-        await incrementTotpFailCount(uid);
         return response.badRequest({
           message: "备份码格式错误",
         });
@@ -213,7 +221,6 @@ export async function verifyTotp(
     }
 
     if (!verified) {
-      await incrementTotpFailCount(uid);
       return response.badRequest({
         message: "验证码错误，请重试",
       });
@@ -244,6 +251,12 @@ export async function verifyTotp(
       },
     });
 
+    const activeSessionUser = await verifySession(dbRefreshToken.id, user.uid);
+    if (!activeSessionUser) {
+      await prisma.refreshToken.delete({ where: { id: dbRefreshToken.id } });
+      return response.unauthorized({ message: "该账户已被禁用" });
+    }
+
     // 分发令牌
     const refreshToken = jwtTokenSign({
       inner: {
@@ -256,10 +269,12 @@ export async function verifyTotp(
 
     const accessToken = jwtTokenSign({
       inner: {
+        type: "access",
         uid: user.uid,
-        username: user.username,
-        nickname: user.nickname ?? "",
-        role: user.role,
+        sessionId: dbRefreshToken.id,
+        username: activeSessionUser.username,
+        nickname: activeSessionUser.nickname ?? activeSessionUser.username,
+        role: activeSessionUser.role,
       },
       expired: "10m",
     });
@@ -395,7 +410,7 @@ export async function enableTotp(
       });
     }
 
-    const decoded = jwtTokenVerify<AccessTokenPayload>(accessToken);
+    const decoded = await verifyAccessToken(accessToken);
     if (!decoded) {
       return response.unauthorized({
         message: "未登录",
@@ -516,7 +531,7 @@ export async function confirmTotp(
       });
     }
 
-    const decoded = jwtTokenVerify<AccessTokenPayload>(accessToken);
+    const decoded = await verifyAccessToken(accessToken);
     if (!decoded) {
       return response.unauthorized({
         message: "未登录",
@@ -662,7 +677,7 @@ export async function disableTotp(
       });
     }
 
-    const decoded = jwtTokenVerify<AccessTokenPayload>(accessToken);
+    const decoded = await verifyAccessToken(accessToken);
     if (!decoded) {
       return response.unauthorized({
         message: "未登录",
@@ -786,7 +801,7 @@ export async function regenerateBackupCodes(
       });
     }
 
-    const decoded = jwtTokenVerify<AccessTokenPayload>(accessToken);
+    const decoded = await verifyAccessToken(accessToken);
     if (!decoded) {
       return response.unauthorized({
         message: "未登录",

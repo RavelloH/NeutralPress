@@ -1,16 +1,11 @@
+import http from "node:http";
+import type { AddressInfo } from "node:net";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // vi.hoisted 用于在 vi.mock 工厂之前声明变量
-const { mockLookup } = vi.hoisted(() => {
-  return { mockLookup: vi.fn() };
-});
-
-// Mock server-only
-vi.mock("server-only", () => ({}));
-
-// Mock ip-utils - 使用真实逻辑的精简版本
-vi.mock("@/lib/server/ip-utils", () => ({
-  isPrivateIP: vi.fn((ip: string) => {
+const { mockLookup, mockIsPrivateIP, defaultIsPrivateIP } = vi.hoisted(() => {
+  const defaultIsPrivateIP = (ip: string) => {
     if (ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1")
       return true;
     if (ip.startsWith("10.")) return true;
@@ -22,7 +17,21 @@ vi.mock("@/lib/server/ip-utils", () => ({
     if (ip.startsWith("169.254.")) return true;
     if (ip === "0.0.0.0") return true;
     return false;
-  }),
+  };
+
+  return {
+    mockLookup: vi.fn(),
+    mockIsPrivateIP: vi.fn(defaultIsPrivateIP),
+    defaultIsPrivateIP,
+  };
+});
+
+// Mock server-only
+vi.mock("server-only", () => ({}));
+
+// Mock ip-utils - 使用真实逻辑的精简版本
+vi.mock("@/lib/server/ip-utils", () => ({
+  isPrivateIP: mockIsPrivateIP,
 }));
 
 // Mock dns
@@ -34,8 +43,23 @@ vi.mock("node:dns/promises", () => ({
 
 import {
   assertPublicHttpUrl,
+  fetchPublicHttpUrlBuffer,
   readResponseBufferWithLimit,
 } from "@/lib/server/url-security";
+
+async function listenOnLoopback(server: http.Server): Promise<number> {
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const address = server.address() as AddressInfo;
+  return address.port;
+}
+
+async function closeServer(server: http.Server): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
+}
 
 // ============================================================================
 // assertPublicHttpUrl
@@ -211,6 +235,12 @@ describe("assertPublicHttpUrl", () => {
         assertPublicHttpUrl("http://255.255.255.255"),
       ).rejects.toThrow("不允许访问内网或保留地址");
     });
+
+    it("拒绝 IPv4 文档网段", async () => {
+      await expect(assertPublicHttpUrl("http://192.0.2.1")).rejects.toThrow(
+        "不允许访问内网或保留地址",
+      );
+    });
   });
 
   describe("直接 IP 地址校验 - IPv6 保留地址", () => {
@@ -258,6 +288,25 @@ describe("assertPublicHttpUrl", () => {
       ).rejects.toThrow();
     });
 
+    it.each(["::ffff:7f00:1", "0:0:0:0:0:ffff:7f00:1", "::ffff:127.0.0.1"])(
+      "拒绝 IPv4 映射 loopback 的写法 %s",
+      async (address) => {
+        await expect(
+          assertPublicHttpUrl(`http://[${address}]`),
+        ).rejects.toThrow();
+      },
+    );
+
+    it.each(["fe90::1", "febf::1"])(
+      "拒绝完整链路本地范围内的 %s",
+      async (address) => {
+        mockLookup.mockResolvedValue([{ address, family: 6 }]);
+        await expect(
+          assertPublicHttpUrl("http://link-local.example"),
+        ).rejects.toThrow("目标地址解析到内网或保留地址");
+      },
+    );
+
     it.each([
       ["NAT64", "64:ff9b::a9fe:a9fe"],
       ["6to4", "2002:a9fe:a9fe::"],
@@ -265,9 +314,9 @@ describe("assertPublicHttpUrl", () => {
     ])("拒绝 %s IPv6 过渡地址", async (_name, address) => {
       mockLookup.mockResolvedValue([{ address, family: 6 }]);
 
-      await expect(assertPublicHttpUrl(`http://[${address}]`)).rejects.toThrow(
-        "目标地址解析到内网或保留地址",
-      );
+      await expect(
+        assertPublicHttpUrl(`http://[${address}]`),
+      ).rejects.toThrow();
     });
   });
 
@@ -501,6 +550,7 @@ describe("readResponseBufferWithLimit", () => {
 describe("assertPublicHttpUrl - 补充测试", () => {
   beforeEach(() => {
     mockLookup.mockReset();
+    mockIsPrivateIP.mockImplementation(defaultIsPrivateIP);
   });
 
   describe("空主机名", () => {
@@ -553,5 +603,83 @@ describe("assertPublicHttpUrl - 补充测试", () => {
         assertPublicHttpUrl("data:text/html,<h1>test</h1>"),
       ).rejects.toThrow();
     });
+  });
+});
+
+describe("fetchPublicHttpUrlBuffer 总体超时", () => {
+  beforeEach(() => {
+    mockLookup.mockReset();
+    mockIsPrivateIP.mockImplementation(defaultIsPrivateIP);
+  });
+
+  it("重定向后的 DNS 等待仍受同一 deadline 限制，迟到解析不会发起请求", async () => {
+    let port = 0;
+    const paths: string[] = [];
+    const server = http.createServer((request, response) => {
+      paths.push(request.url ?? "");
+      response.writeHead(302, {
+        Location: `http://slow.test:${port}/target`,
+      });
+      response.end();
+    });
+    port = await listenOnLoopback(server);
+
+    let finishSlowLookup:
+      | ((records: Array<{ address: string; family: number }>) => void)
+      | undefined;
+    mockLookup.mockImplementation((hostname: string) => {
+      if (hostname === "start.test") {
+        return Promise.resolve([{ address: "127.0.0.1", family: 4 }]);
+      }
+      return new Promise((resolve) => {
+        finishSlowLookup = resolve;
+      });
+    });
+    mockIsPrivateIP.mockImplementation(
+      (ip: string) => ip !== "127.0.0.1" && defaultIsPrivateIP(ip),
+    );
+
+    try {
+      await expect(
+        fetchPublicHttpUrlBuffer(`http://start.test:${port}/redirect`, {
+          timeoutMs: 100,
+          maxBytes: 1024,
+          maxRedirects: 1,
+        }),
+      ).rejects.toThrow("请求超时");
+
+      finishSlowLookup?.([{ address: "127.0.0.1", family: 4 }]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(paths).toEqual(["/redirect"]);
+    } finally {
+      finishSlowLookup?.([{ address: "127.0.0.1", family: 4 }]);
+      await closeServer(server);
+    }
+  });
+
+  it("持续慢滴响应不能重置总体超时", async () => {
+    const server = http.createServer((_request, response) => {
+      response.writeHead(200);
+      const interval = setInterval(() => response.write("x"), 20);
+      response.on("close", () => clearInterval(interval));
+    });
+    const port = await listenOnLoopback(server);
+    mockLookup.mockResolvedValue([{ address: "127.0.0.1", family: 4 }]);
+    mockIsPrivateIP.mockImplementation(
+      (ip: string) => ip !== "127.0.0.1" && defaultIsPrivateIP(ip),
+    );
+
+    const startedAt = Date.now();
+    try {
+      await expect(
+        fetchPublicHttpUrlBuffer(`http://slow.test:${port}/`, {
+          timeoutMs: 120,
+          maxBytes: 1024,
+        }),
+      ).rejects.toThrow("请求超时");
+      expect(Date.now() - startedAt).toBeLessThan(1000);
+    } finally {
+      await closeServer(server);
+    }
   });
 });

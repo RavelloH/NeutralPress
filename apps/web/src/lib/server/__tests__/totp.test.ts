@@ -6,6 +6,7 @@ const mockRedis = {
   incr: vi.fn(),
   expire: vi.fn(),
   del: vi.fn(),
+  eval: vi.fn(),
 };
 
 vi.mock("@/lib/server/redis", () => ({
@@ -403,6 +404,32 @@ describe("totp", () => {
       mockRedis.incr.mockResolvedValue(2);
       await totpModule.incrementTotpFailCount(1);
       expect(mockRedis.expire).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("reserveTotpAttempt", () => {
+    it("应通过单条 Lua 脚本原子预留并在首次计数时设置 TTL", async () => {
+      mockRedis.eval.mockResolvedValue(1);
+
+      const result = await totpModule.reserveTotpAttempt(42);
+
+      expect(result).toBe(true);
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining("redis.call('INCR',KEYS[1])"),
+        1,
+        "np:cache:auth:totp:fail:42",
+        "3",
+        "300",
+      );
+      const script = mockRedis.eval.mock.calls[0]![0] as string;
+      expect(script).toContain("redis.call('GET',KEYS[1])");
+      expect(script).toContain("redis.call('EXPIRE',KEYS[1],ARGV[2])");
+    });
+
+    it("达到失败次数上限时应拒绝预留", async () => {
+      mockRedis.eval.mockResolvedValue(0);
+
+      await expect(totpModule.reserveTotpAttempt(42)).resolves.toBe(false);
     });
   });
 

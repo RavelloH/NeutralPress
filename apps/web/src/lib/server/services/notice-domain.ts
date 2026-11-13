@@ -17,8 +17,7 @@ import type { NextResponse } from "next/server";
 
 import { publishNoticeToUser } from "@/lib/server/ably";
 import { authVerify } from "@/lib/server/auth-verify";
-import type { AccessTokenPayload } from "@/lib/server/jwt";
-import { jwtTokenVerify } from "@/lib/server/jwt";
+import { verifyAccessToken } from "@/lib/server/auth-verify";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
@@ -264,7 +263,7 @@ export async function markNoticesAsRead(
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
-    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
+    const decoded = await verifyAccessToken(token);
 
     if (!decoded) {
       return response.unauthorized({
@@ -355,7 +354,7 @@ export async function markAllNoticesAsRead(
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
-    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
+    const decoded = await verifyAccessToken(token);
 
     if (!decoded) {
       return response.unauthorized({

@@ -2348,6 +2348,7 @@ export async function getFolderBreadcrumb(
         systemType: true,
         userUid: true,
         path: true,
+        parentId: true,
       },
     });
 
@@ -2355,30 +2356,85 @@ export async function getFolderBreadcrumb(
       return response.notFound({ message: "文件夹不存在" });
     }
 
-    // 解析路径获取所有祖先文件夹 ID
-    // path 格式: "2/3/4"（包含自己的 ID，与 Comment 一致）
-    // 需要排除最后一个（自己的 ID）
-    const pathIds = folder.path
-      ? folder.path
-          .split("/")
-          .filter((id) => id !== "")
-          .map(Number)
-          .slice(0, -1) // 排除最后一个（自己的 ID）
-      : [];
+    let ancestors: Array<{
+      id: number;
+      name: string;
+      systemType: string;
+      userUid: number | null;
+    }> = [];
 
-    // 获取所有祖先文件夹（排除当前文件夹）
-    const ancestors = await prisma.virtualFolder.findMany({
-      where: {
-        id: { in: pathIds },
-      },
-      orderBy: { depth: "asc" },
-      select: {
-        id: true,
-        name: true,
-        systemType: true,
-        userUid: true,
-      },
-    });
+    if (user.role === "AUTHOR") {
+      const reversedAncestors: typeof ancestors = [];
+      const visitedIds = new Set([folder.id]);
+      let parentId = folder.parentId ?? null;
+
+      while (parentId !== null) {
+        if (visitedIds.size >= 128 || visitedIds.has(parentId)) {
+          return response.notFound({ message: "文件夹不存在" });
+        }
+        visitedIds.add(parentId);
+
+        const parent = await prisma.virtualFolder.findUnique({
+          where: { id: parentId },
+          select: {
+            id: true,
+            name: true,
+            systemType: true,
+            userUid: true,
+            parentId: true,
+          },
+        });
+        if (!parent) {
+          return response.notFound({ message: "文件夹不存在" });
+        }
+
+        reversedAncestors.push(parent);
+        parentId = parent.parentId;
+      }
+
+      ancestors = reversedAncestors.reverse();
+    } else {
+      // 管理员和编辑可访问任意文件夹，沿存储路径构造面包屑。
+      const pathIds = folder.path
+        ? folder.path
+            .split("/")
+            .filter((id) => id !== "")
+            .map(Number)
+            .slice(0, -1)
+        : [];
+
+      ancestors = pathIds.length
+        ? await prisma.virtualFolder.findMany({
+            where: {
+              id: { in: pathIds },
+            },
+            orderBy: { depth: "asc" },
+            select: {
+              id: true,
+              name: true,
+              systemType: true,
+              userUid: true,
+            },
+          })
+        : [];
+    }
+
+    if (user.role === "AUTHOR") {
+      const accessChain = [...ancestors, folder];
+      const hasPublicAccess = accessChain.some(
+        (item) => item.systemType === "ROOT_PUBLIC",
+      );
+      const hasOwnHomeAccess = accessChain.some(
+        (item) => item.systemType === "USER_HOME" && item.userUid === user.uid,
+      );
+      const hasOtherUserHome = accessChain.some(
+        (item) => item.systemType === "USER_HOME" && item.userUid !== user.uid,
+      );
+
+      if ((!hasPublicAccess && !hasOwnHomeAccess) || hasOtherUserHome) {
+        return response.notFound({ message: "文件夹不存在" });
+      }
+    }
 
     // 构建面包屑（包括当前文件夹本身）
     const breadcrumb: BreadcrumbItem[] = [

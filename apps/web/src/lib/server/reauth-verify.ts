@@ -3,12 +3,13 @@ import "server-only";
 import { createHash } from "crypto";
 import { cookies } from "next/headers";
 
+import { verifyAccessToken } from "@/lib/server/auth-verify";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
-import { type AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
+import { jwtTokenVerify } from "@/lib/server/jwt";
 
 type ReauthTokenPayload = {
   uid: number;
-  type?: string;
+  type: "reauth";
   exp: number;
   ipHash?: string;
   userAgentHash?: string;
@@ -74,7 +75,7 @@ export async function checkReauthToken(expectedUid?: number): Promise<boolean> {
 
     if (!verifyUid) {
       const accessToken = cookieStore.get("ACCESS_TOKEN")?.value || "";
-      const accessDecoded = jwtTokenVerify<AccessTokenPayload>(accessToken);
+      const accessDecoded = await verifyAccessToken(accessToken);
       if (!accessDecoded?.uid) {
         return false;
       }

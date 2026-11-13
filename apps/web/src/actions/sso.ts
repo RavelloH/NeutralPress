@@ -5,13 +5,10 @@ import { cookies } from "next/headers";
 import { after } from "next/server";
 
 import { logAuditEvent } from "@/lib/server/audit";
+import { verifyAccessToken, verifySession } from "@/lib/server/auth-verify";
 import { getConfig, getConfigs } from "@/lib/server/config-cache";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
-import {
-  type AccessTokenPayload,
-  jwtTokenSign,
-  jwtTokenVerify,
-} from "@/lib/server/jwt";
+import { jwtTokenSign, jwtTokenVerify } from "@/lib/server/jwt";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { hashPassword } from "@/lib/server/password";
 import prisma from "@/lib/server/prisma";
@@ -76,7 +73,7 @@ export async function unlinkSSO({
     // 从 cookie 获取当前用户的 access token
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
-    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
+    const decoded = await verifyAccessToken(token);
 
     if (!decoded) {
       return response.unauthorized({
@@ -247,7 +244,7 @@ export async function setPassword({
     // 从 cookie 获取当前用户的 access token
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
-    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
+    const decoded = await verifyAccessToken(token);
 
     if (!decoded) {
       return response.unauthorized({
@@ -489,6 +486,7 @@ export async function handleSSOBind({
     // 验证 JWT token
     const bindTokenPayload = jwtTokenVerify<{
       uid: number;
+      sessionId: string;
       purpose: string;
       provider: string;
     }>(bindTokenCookie);
@@ -506,11 +504,7 @@ export async function handleSSOBind({
 
     const uid = bindTokenPayload.uid;
 
-    // 从数据库查询用户信息
-    const currentUser = await prisma.user.findUnique({
-      where: { uid },
-      select: { uid: true },
-    });
+    const currentUser = await verifySession(bindTokenPayload.sessionId, uid);
 
     if (!currentUser) {
       clearOAuthCookies();
@@ -786,7 +780,7 @@ export async function handleSSOCallback({
     // 检查是否已登录（用于审计日志）
     const accessToken = cookieStore.get("ACCESS_TOKEN")?.value;
     const _currentUser = accessToken
-      ? jwtTokenVerify<AccessTokenPayload>(accessToken)
+      ? await verifyAccessToken(accessToken)
       : null;
 
     const clientIP = await getClientIP();
@@ -823,7 +817,7 @@ export async function handleSSOCallback({
     if (account) {
       const user = account.user;
 
-      if (user.deletedAt || user.status === "SUSPENDED") {
+      if (user.deletedAt || user.status !== "ACTIVE") {
         clearOAuthCookies();
         return response.badRequest({
           message: "该账户已被禁用",
@@ -847,6 +841,21 @@ export async function handleSSOCallback({
         },
       });
 
+      const activeSessionUser = await verifySession(
+        dbRefreshToken.id,
+        user.uid,
+      );
+      if (!activeSessionUser) {
+        await prisma.refreshToken.delete({ where: { id: dbRefreshToken.id } });
+        clearOAuthCookies();
+        return response.unauthorized({
+          message: "该账户已被禁用，请重新登录",
+        }) as unknown as ApiResponse<{
+          userInfo?: UserInfo;
+          action: "login" | "verify" | "bind";
+        }>;
+      }
+
       const refreshToken = jwtTokenSign({
         inner: {
           uid: user.uid,
@@ -858,10 +867,12 @@ export async function handleSSOCallback({
 
       const newAccessToken = jwtTokenSign({
         inner: {
+          type: "access",
           uid: user.uid,
-          username: user.username,
-          nickname: user.nickname ?? "",
-          role: user.role,
+          sessionId: dbRefreshToken.id,
+          username: activeSessionUser.username,
+          nickname: activeSessionUser.nickname ?? activeSessionUser.username,
+          role: activeSessionUser.role,
         },
         expired: "10m",
       });
@@ -888,7 +899,7 @@ export async function handleSSOCallback({
             nickname: user.nickname,
             email: user.email,
             avatar: user.avatar,
-            role: user.role,
+            role: activeSessionUser.role,
             exp: expiredAt.toISOString(),
           },
         },
@@ -1009,6 +1020,21 @@ export async function handleSSOCallback({
       },
     });
 
+    const activeSessionUser = await verifySession(
+      dbRefreshToken.id,
+      newUser.uid,
+    );
+    if (!activeSessionUser) {
+      await prisma.refreshToken.delete({ where: { id: dbRefreshToken.id } });
+      clearOAuthCookies();
+      return response.unauthorized({
+        message: "登录状态已失效，请重新登录",
+      }) as unknown as ApiResponse<{
+        userInfo?: UserInfo;
+        action: "login" | "verify" | "bind";
+      }>;
+    }
+
     const refreshToken = jwtTokenSign({
       inner: {
         uid: newUser.uid,
@@ -1020,10 +1046,12 @@ export async function handleSSOCallback({
 
     const newAccessToken = jwtTokenSign({
       inner: {
+        type: "access",
         uid: newUser.uid,
-        username: newUser.username,
-        nickname: newUser.nickname ?? "",
-        role: newUser.role,
+        sessionId: dbRefreshToken.id,
+        username: activeSessionUser.username,
+        nickname: activeSessionUser.nickname ?? activeSessionUser.username,
+        role: activeSessionUser.role,
       },
       expired: "10m",
     });
@@ -1043,7 +1071,7 @@ export async function handleSSOCallback({
           nickname: newUser.nickname,
           email: newUser.email,
           avatar: newUser.avatar,
-          role: newUser.role,
+          role: activeSessionUser.role,
           exp: expiredAt.toISOString(),
         },
       },

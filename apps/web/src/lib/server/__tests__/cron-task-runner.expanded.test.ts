@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -35,6 +35,12 @@ vi.mock("@/lib/server/analytics-flush", () => ({
 }));
 
 vi.mock("@/lib/server/url-security", () => ({
+  fetchPublicHttpUrlBuffer: vi.fn().mockResolvedValue({
+    status: 200,
+    headers: new Headers(),
+    body: Buffer.from(""),
+    finalUrl: "https://example.com",
+  }),
   assertPublicHttpUrl: vi
     .fn()
     .mockResolvedValue({ url: new URL("https://example.com") }),
@@ -71,9 +77,17 @@ vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
 
 vi.mock(".prisma/client", () => ({ Prisma: { JsonNull: null } }));
 
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe("cron-task-runner expanded", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 200 })),
+    );
     mockGetConfig.mockResolvedValue("https://example.com");
     mockGetConfigs.mockResolvedValue(Array(13).fill(30));
     mockQueryRaw.mockReset();
